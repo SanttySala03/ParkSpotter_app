@@ -50,6 +50,15 @@ dependencies {
     implementation(libs.maplibre.android.sdk)
     implementation(libs.maplibre.android.annotation)
 
+    // Navegación (Sprint 1: Splash -> Login -> Register -> Mapa)
+    implementation(libs.androidx.navigation.compose)
+
+    // Previsualización de fotos al publicar un garaje (Sprint 2)
+    implementation(libs.coil.compose)
+
+    // Íconos extendidos usados en Login/Register/Garajes (Email, Lock, Home, etc.)
+    implementation("androidx.compose.material:material-icons-extended")
+
     // Tests
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
