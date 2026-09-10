@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import com.example.parkspotter.navigation.NavGraph
 import com.example.parkspotter.ui.theme.*
 import org.maplibre.android.MapLibre
 import org.maplibre.android.camera.CameraPosition
@@ -73,7 +74,7 @@ class MainActivity : ComponentActivity() {
         MapLibre.getInstance(this)
         setContent {
             ParkSpotterTheme {
-                ParkSpotterApp()
+                NavGraph()
             }
         }
     }
