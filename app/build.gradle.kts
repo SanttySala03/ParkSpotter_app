@@ -59,6 +59,18 @@ dependencies {
     // Íconos extendidos usados en Login/Register/Garajes (Email, Lock, Home, etc.)
     implementation("androidx.compose.material:material-icons-extended")
 
+    // ViewModels de Compose (AuthViewModel, GarajeViewModel — Sprint 2)
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
+
+    // Cliente HTTP hacia el backend Spring Boot (ApiClient, AuthApi, GarajeApi)
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+
+    // Ubicación del dispositivo (LocationHelper — botón "mi ubicación" del mapa)
+    implementation("com.google.android.gms:play-services-location:21.3.0")
+
     // Tests
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))

@@ -15,16 +15,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.parkspotter.model.Garaje
 import com.example.parkspotter.ui.theme.*
+import com.example.parkspotter.viewmodel.GarajeViewModel
 
 /**
- * Listado de garajes del propietario autenticado.
- * Por ahora usa datos de ejemplo en memoria; reemplazar por el resultado
- * real del backend (filtrado por propietarioId) cuando esté disponible.
+ * Listado de garajes del propietario autenticado, conectado al backend real
+ * a través de GarajeViewModel (Sprint 2).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,29 +34,16 @@ fun MisGarajesScreen(
     onAgregarGaraje: () -> Unit,
     onVerMapa: () -> Unit
 ) {
-    var garajes by remember {
-        mutableStateOf(
-            listOf(
-                Garaje(
-                    id = "1",
-                    nombre = "Garaje Chapinero",
-                    direccion = "Cra 13 #63-45, Chapinero",
-                    precioPorHora = 3000,
-                    espaciosTotales = 2,
-                    espaciosDisponibles = 2,
-                    activo = true
-                ),
-                Garaje(
-                    id = "2",
-                    nombre = "Garaje Kennedy",
-                    direccion = "Cl 38 Sur #78-12, Kennedy",
-                    precioPorHora = 2000,
-                    espaciosTotales = 1,
-                    espaciosDisponibles = 0,
-                    activo = false
-                )
-            )
-        )
+    val context = LocalContext.current
+    val viewModel: GarajeViewModel = viewModel(factory = GarajeViewModel.factory(context))
+    val garajes by viewModel.garajes.collectAsState()
+    val isLoading by viewModel.loading.collectAsState()
+    val errorMessage by viewModel.error.collectAsState()
+
+    // Se recarga cada vez que la pantalla vuelve a componerse (p. ej. al
+    // regresar de RegistrarGarajeScreen), así la lista siempre queda al día.
+    LaunchedEffect(Unit) {
+        viewModel.cargarMisGarajes()
     }
 
     Scaffold(
@@ -81,33 +70,55 @@ fun MisGarajesScreen(
             }
         }
     ) { padding ->
-        if (garajes.isEmpty()) {
-            EmptyGarajesState(modifier = Modifier.padding(padding), onAgregarGaraje = onAgregarGaraje)
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .padding(padding)
-                    .fillMaxSize(),
-                contentPadding = PaddingValues(20.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                item {
-                    Text(
-                        text = "${garajes.size} garaje(s) publicado(s)",
-                        color = TextMedium,
-                        fontSize = 13.sp,
-                        modifier = Modifier.padding(bottom = 4.dp)
-                    )
+        when {
+            isLoading && garajes.isEmpty() -> {
+                Box(
+                    modifier = Modifier.padding(padding).fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = BluePrimary)
                 }
-                items(garajes, key = { it.id }) { garaje ->
-                    GarajeCard(
-                        garaje = garaje,
-                        onToggleActivo = { activo ->
-                            garajes = garajes.map {
-                                if (it.id == garaje.id) it.copy(activo = activo) else it
+            }
+            errorMessage != null && garajes.isEmpty() -> {
+                Column(
+                    modifier = Modifier.padding(padding).fillMaxSize().padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text("No pudimos cargar tus garajes", color = TextDark, fontWeight = FontWeight.SemiBold)
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(errorMessage ?: "", color = TextMedium, fontSize = 13.sp)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(onClick = { viewModel.cargarMisGarajes() }) { Text("Reintentar") }
+                }
+            }
+            garajes.isEmpty() -> {
+                EmptyGarajesState(modifier = Modifier.padding(padding), onAgregarGaraje = onAgregarGaraje)
+            }
+            else -> {
+                LazyColumn(
+                    modifier = Modifier
+                        .padding(padding)
+                        .fillMaxSize(),
+                    contentPadding = PaddingValues(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    item {
+                        Text(
+                            text = "${garajes.size} garaje(s) publicado(s)",
+                            color = TextMedium,
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(bottom = 4.dp)
+                        )
+                    }
+                    items(garajes, key = { it.id }) { garaje ->
+                        GarajeCard(
+                            garaje = garaje,
+                            onToggleActivo = { activo ->
+                                viewModel.cambiarDisponibilidad(garaje.id, activo)
                             }
-                        }
-                    )
+                        )
+                    }
                 }
             }
         }

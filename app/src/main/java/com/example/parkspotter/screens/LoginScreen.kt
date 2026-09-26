@@ -21,22 +21,31 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.parkspotter.model.RolUsuario
 import com.example.parkspotter.ui.theme.*
+import com.example.parkspotter.viewmodel.AuthViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
-    onLoginSuccess: () -> Unit,
+    onLoginSuccess: (RolUsuario) -> Unit,
     onNavigateToRegister: () -> Unit,
     onGoogleLoginClick: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val viewModel: AuthViewModel = viewModel(factory = AuthViewModel.factory(context))
+    val isLoading by viewModel.loading.collectAsState()
+    val backendError by viewModel.error.collectAsState()
+
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-    var isLoading by remember { mutableStateOf(false) }
+    var localError by remember { mutableStateOf<String?>(null) }
+    val errorMessage = localError ?: backendError
 
     Box(
         modifier = Modifier
@@ -82,7 +91,7 @@ fun LoginScreen(
 
             OutlinedTextField(
                 value = email,
-                onValueChange = { email = it; errorMessage = null },
+                onValueChange = { email = it; localError = null; viewModel.limpiarError() },
                 label = { Text("Correo electrónico") },
                 leadingIcon = { Icon(Icons.Filled.Email, contentDescription = null, tint = TextLight) },
                 singleLine = true,
@@ -96,7 +105,7 @@ fun LoginScreen(
 
             OutlinedTextField(
                 value = password,
-                onValueChange = { password = it; errorMessage = null },
+                onValueChange = { password = it; localError = null; viewModel.limpiarError() },
                 label = { Text("Contraseña") },
                 leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = null, tint = TextLight) },
                 trailingIcon = {
@@ -140,13 +149,12 @@ fun LoginScreen(
                 onClick = {
                     when {
                         email.isBlank() || password.isBlank() ->
-                            errorMessage = "Completa correo y contraseña"
+                            localError = "Completa correo y contraseña"
                         !email.contains("@") ->
-                            errorMessage = "Ingresa un correo válido"
+                            localError = "Ingresa un correo válido"
                         else -> {
-                            isLoading = true
-                            // TODO: integrar autenticación real (Firebase Auth / backend)
-                            onLoginSuccess()
+                            localError = null
+                            viewModel.login(email, password) { rol -> onLoginSuccess(rol) }
                         }
                     }
                 },

@@ -42,10 +42,9 @@ fun NavGraph(navController: NavHostController = rememberNavController()) {
 
         composable(Rutas.LOGIN) {
             LoginScreen(
-                onLoginSuccess = {
-                    // TODO: cuando exista el rol real del usuario autenticado,
-                    // enrutar propietarios a MIS_GARAJES y conductores a MAPA.
-                    navController.navigate(Rutas.MAPA) {
+                onLoginSuccess = { rol ->
+                    val destino = if (rol == RolUsuario.PROPIETARIO) Rutas.MIS_GARAJES else Rutas.MAPA
+                    navController.navigate(destino) {
                         popUpTo(Rutas.LOGIN) { inclusive = true }
                     }
                 },

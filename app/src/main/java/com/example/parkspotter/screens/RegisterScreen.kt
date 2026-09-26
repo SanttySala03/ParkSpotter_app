@@ -16,13 +16,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.parkspotter.model.RolUsuario
 import com.example.parkspotter.ui.theme.*
+import com.example.parkspotter.viewmodel.AuthViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,6 +33,11 @@ fun RegisterScreen(
     onRegisterSuccess: (RolUsuario) -> Unit,
     onNavigateToLogin: () -> Unit
 ) {
+    val context = LocalContext.current
+    val viewModel: AuthViewModel = viewModel(factory = AuthViewModel.factory(context))
+    val isLoading by viewModel.loading.collectAsState()
+    val backendError by viewModel.error.collectAsState()
+
     var rolSeleccionado by remember { mutableStateOf(RolUsuario.CONDUCTOR) }
 
     var nombre by remember { mutableStateOf("") }
@@ -41,7 +49,8 @@ fun RegisterScreen(
     var telefono by remember { mutableStateOf("") }
     var ciudad by remember { mutableStateOf("Bogotá") }
 
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var localError by remember { mutableStateOf<String?>(null) }
+    val errorMessage = localError ?: backendError
 
     Box(
         modifier = Modifier
@@ -186,7 +195,7 @@ fun RegisterScreen(
 
             Button(
                 onClick = {
-                    errorMessage = when {
+                    localError = when {
                         nombre.isBlank() || email.isBlank() || password.isBlank() ->
                             "Completa todos los campos obligatorios"
                         !email.contains("@") -> "Ingresa un correo válido"
@@ -195,12 +204,14 @@ fun RegisterScreen(
                         rolSeleccionado == RolUsuario.PROPIETARIO && telefono.isBlank() ->
                             "Ingresa un teléfono de contacto"
                         else -> {
-                            // TODO: integrar registro real (Firebase Auth / backend)
-                            onRegisterSuccess(rolSeleccionado)
+                            viewModel.register(email, password, rolSeleccionado) {
+                                onRegisterSuccess(rolSeleccionado)
+                            }
                             null
                         }
                     }
                 },
+                enabled = !isLoading,
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = BluePrimary,
@@ -210,13 +221,21 @@ fun RegisterScreen(
                     .fillMaxWidth()
                     .height(52.dp)
             ) {
-                Text(
-                    text = if (rolSeleccionado == RolUsuario.CONDUCTOR)
-                        "Registrarme como conductor"
-                    else "Registrarme como propietario",
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        color = SurfaceWhite,
+                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(20.dp)
+                    )
+                } else {
+                    Text(
+                        text = if (rolSeleccionado == RolUsuario.CONDUCTOR)
+                            "Registrarme como conductor"
+                        else "Registrarme como propietario",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))

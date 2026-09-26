@@ -29,13 +29,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.parkspotter.model.Garaje
 import com.example.parkspotter.ui.theme.*
+import com.example.parkspotter.viewmodel.GarajeViewModel
 
 /**
  * Formulario para que un propietario publique un garaje en desuso.
- * onGarajeGuardado recibe el objeto ya listo para persistir en el backend.
+ * onGarajeGuardado se dispara solo después de que el backend confirma
+ * la creación (respuesta 2xx de POST /garajes).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,13 +46,19 @@ fun RegistrarGarajeScreen(
     onGarajeGuardado: (Garaje) -> Unit,
     onCancelar: () -> Unit
 ) {
+    val context = LocalContext.current
+    val viewModel: GarajeViewModel = viewModel(factory = GarajeViewModel.factory(context))
+    val isLoading by viewModel.loading.collectAsState()
+    val backendError by viewModel.error.collectAsState()
+
     var nombre by remember { mutableStateOf("") }
     var direccion by remember { mutableStateOf("") }
     var descripcion by remember { mutableStateOf("") }
     var precio by remember { mutableStateOf("") }
     var espacios by remember { mutableStateOf("1") }
     var fotos by remember { mutableStateOf<List<Uri>>(emptyList()) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var localError by remember { mutableStateOf<String?>(null) }
+    val errorMessage = localError ?: backendError
 
     val pickImagesLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents()
@@ -206,7 +215,7 @@ fun RegistrarGarajeScreen(
                 onClick = {
                     val precioInt = precio.toIntOrNull()
                     val espaciosInt = espacios.toIntOrNull()
-                    errorMessage = when {
+                    localError = when {
                         nombre.isBlank() -> "Ingresa el nombre del garaje"
                         direccion.isBlank() -> "Ingresa la dirección"
                         precioInt == null || precioInt <= 0 -> "Ingresa un precio válido"
@@ -219,28 +228,41 @@ fun RegistrarGarajeScreen(
                                 precioPorHora = precioInt,
                                 espaciosTotales = espaciosInt,
                                 espaciosDisponibles = espaciosInt,
+                                // Nota: son URIs locales del celular, aún no se suben a
+                                // ningún storage (Firebase/S3) — pendiente fuera de Sprint 2.
                                 fotos = fotos.map { it.toString() },
                                 activo = true
                             )
-                            // TODO: subir fotos + persistir en backend (Firestore/API)
-                            onGarajeGuardado(garaje)
+                            viewModel.publicarGaraje(garaje) { exito ->
+                                if (exito) onGarajeGuardado(garaje)
+                            }
                             null
                         }
                     }
                 },
+                enabled = !isLoading,
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = GreenAccentDark, contentColor = SurfaceWhite),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp)
             ) {
-                Text("Publicar garaje", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        color = SurfaceWhite,
+                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(20.dp)
+                    )
+                } else {
+                    Text("Publicar garaje", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             OutlinedButton(
                 onClick = onCancelar,
+                enabled = !isLoading,
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier
                     .fillMaxWidth()
