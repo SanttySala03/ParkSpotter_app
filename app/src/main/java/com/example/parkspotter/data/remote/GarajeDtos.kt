@@ -13,7 +13,8 @@ data class GarajeResponse(
     val lat: Double,
     val lng: Double,
     val activo: Boolean,
-    val createdAt: String
+    val createdAt: String,
+    val distanciaKm: Double? = null
 )
 
 data class GarajeRequest(

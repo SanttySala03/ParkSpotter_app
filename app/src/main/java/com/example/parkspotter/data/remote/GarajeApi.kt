@@ -8,12 +8,21 @@ import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
+import retrofit2.http.Query
 
 interface GarajeApi {
 
-    // Listado público de garajes activos — fuente real del mapa (Sprint 3).
+    // Búsqueda de garajes activos — fuente real del mapa (Sprint 3).
+    // Todos los parámetros son opcionales: sin ellos trae todos los activos.
     @GET("garajes")
-    suspend fun listarActivos(): Response<List<GarajeResponse>>
+    suspend fun buscar(
+        @Query("lat") lat: Double? = null,
+        @Query("lng") lng: Double? = null,
+        @Query("radioKm") radioKm: Double? = null,
+        @Query("precioMax") precioMax: Int? = null,
+        @Query("soloDisponibles") soloDisponibles: Boolean? = null,
+        @Query("q") texto: String? = null
+    ): Response<List<GarajeResponse>>
 
     @GET("garajes/{id}")
     suspend fun obtener(@Path("id") id: String): Response<GarajeResponse>

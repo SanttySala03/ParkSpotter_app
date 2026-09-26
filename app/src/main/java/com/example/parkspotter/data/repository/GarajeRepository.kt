@@ -11,7 +11,16 @@ import retrofit2.Response
 
 class GarajeRepository(private val api: GarajeApi) {
 
-    suspend fun listarActivos(): Resource<List<Garaje>> = mapList { api.listarActivos() }
+    suspend fun buscar(
+        lat: Double? = null,
+        lng: Double? = null,
+        radioKm: Double? = null,
+        precioMax: Int? = null,
+        soloDisponibles: Boolean? = null,
+        texto: String? = null
+    ): Resource<List<Garaje>> = mapList {
+        api.buscar(lat, lng, radioKm, precioMax, soloDisponibles, texto?.takeIf { it.isNotBlank() })
+    }
 
     suspend fun listarMios(): Resource<List<Garaje>> = mapList { api.listarMios() }
 
@@ -68,6 +77,7 @@ class GarajeRepository(private val api: GarajeApi) {
         fotos = fotos,
         lat = lat,
         lng = lng,
-        activo = activo
+        activo = activo,
+        distanciaKm = distanciaKm
     )
 }

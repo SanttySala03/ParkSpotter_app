@@ -17,5 +17,6 @@ data class Garaje(
     val fotos: List<String> = emptyList(),
     val lat: Double = 4.6782,
     val lng: Double = -74.0582,
-    val activo: Boolean = true
+    val activo: Boolean = true,
+    val distanciaKm: Double? = null
 )
