@@ -61,6 +61,8 @@ dependencies {
 
     // ViewModels de Compose (AuthViewModel, GarajeViewModel — Sprint 2)
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
+    // LocalLifecycleOwner para pasar el ciclo de vida al MapView de MapLibre (Sprint 3)
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
 
     // Cliente HTTP hacia el backend Spring Boot (ApiClient, AuthApi, GarajeApi)
     implementation("com.squareup.retrofit2:retrofit:2.11.0")

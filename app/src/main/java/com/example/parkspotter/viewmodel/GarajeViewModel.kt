@@ -105,19 +105,35 @@ class GarajeViewModel(private val repository: GarajeRepository) : ViewModel() {
         }
     }
 
-    fun publicarGaraje(garaje: Garaje, onResult: (Boolean) -> Unit) {
+    private val _garajeEditando = MutableStateFlow<Garaje?>(null)
+    val garajeEditando: StateFlow<Garaje?> = _garajeEditando
+
+    /** Carga un garaje para editarlo en RegistrarGarajeScreen (Sprint 2). */
+    fun cargarGaraje(id: String) {
         viewModelScope.launch {
             _loading.value = true
             _error.value = null
-            when (val result = repository.crear(garaje)) {
-                is Resource.Success -> {
-                    _garajes.value = _garajes.value + result.data
-                    _loading.value = false
-                    onResult(true)
-                }
+            when (val result = repository.obtener(id)) {
+                is Resource.Success -> _garajeEditando.value = result.data
+                is Resource.Error -> _error.value = result.message
+                Resource.Loading -> Unit
+            }
+            _loading.value = false
+        }
+    }
+
+    /** Crea (id vacío) o actualiza (id existente) un garaje. */
+    fun guardarGaraje(garaje: Garaje, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            _loading.value = true
+            _error.value = null
+            val result = if (garaje.id.isBlank()) repository.crear(garaje)
+                         else repository.actualizar(garaje.id, garaje)
+            _loading.value = false
+            when (result) {
+                is Resource.Success -> onResult(true)
                 is Resource.Error -> {
                     _error.value = result.message
-                    _loading.value = false
                     onResult(false)
                 }
                 Resource.Loading -> Unit
@@ -125,18 +141,48 @@ class GarajeViewModel(private val repository: GarajeRepository) : ViewModel() {
         }
     }
 
-    /** Actualiza el switch al instante (optimista) y revierte si el backend falla. */
+    /** Publica u oculta el garaje (optimista: revierte si el backend falla). */
     fun cambiarDisponibilidad(id: String, activo: Boolean) {
         val anterior = _garajes.value
         _garajes.value = anterior.map { if (it.id == id) it.copy(activo = activo) else it }
         viewModelScope.launch {
-            val result = repository.actualizarDisponibilidad(id, activo)
+            val result = repository.actualizarActivo(id, activo)
             if (result is Resource.Error) {
                 _garajes.value = anterior
                 _error.value = result.message
             }
         }
     }
+
+    /** Sprint 2/3 — el propietario ajusta los cupos libres; los conductores lo ven en el mapa en vivo. */
+    fun cambiarEspaciosDisponibles(id: String, espacios: Int) {
+        val anterior = _garajes.value
+        val garaje = anterior.firstOrNull { it.id == id } ?: return
+        if (espacios < 0 || espacios > garaje.espaciosTotales) return
+        _garajes.value = anterior.map { if (it.id == id) it.copy(espaciosDisponibles = espacios) else it }
+        viewModelScope.launch {
+            val result = repository.actualizarEspacios(id, espacios)
+            if (result is Resource.Error) {
+                _garajes.value = anterior
+                _error.value = result.message
+            }
+        }
+    }
+
+    fun eliminarGaraje(id: String) {
+        val anterior = _garajes.value
+        _garajes.value = anterior.filterNot { it.id == id }
+        viewModelScope.launch {
+            val result = repository.eliminar(id)
+            if (result is Resource.Error) {
+                _garajes.value = anterior
+                _error.value = result.message
+            }
+        }
+    }
+
+    fun limpiarError() { _error.value = null }
+    fun mostrarError(msg: String) { _error.value = msg }
 
     companion object {
         fun factory(context: Context): ViewModelProvider.Factory =

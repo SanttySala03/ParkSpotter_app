@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- HTTP (sin TLS) permitido solo hacia el backend local de desarrollo -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">10.0.2.2</domain>   <!-- emulador -> PC -->
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">127.0.0.1</domain>
+        <!-- Celular físico: agrega aquí la IP de tu PC, p. ej.:
+        <domain includeSubdomains="false">192.168.1.15</domain> -->
+    </domain-config>
+</network-security-config>

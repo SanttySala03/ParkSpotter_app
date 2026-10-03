@@ -110,7 +110,7 @@ fun RegisterScreen(
 
             OutlinedTextField(
                 value = nombre,
-                onValueChange = { nombre = it },
+                onValueChange = { nombre = it; localError = null; viewModel.limpiarError() },
                 label = { Text("Nombre completo") },
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
@@ -121,7 +121,7 @@ fun RegisterScreen(
 
             OutlinedTextField(
                 value = email,
-                onValueChange = { email = it },
+                onValueChange = { email = it; localError = null; viewModel.limpiarError() },
                 label = { Text("Correo electrónico") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
@@ -135,7 +135,7 @@ fun RegisterScreen(
             if (rolSeleccionado == RolUsuario.PROPIETARIO) {
                 OutlinedTextField(
                     value = telefono,
-                    onValueChange = { telefono = it },
+                    onValueChange = { telefono = it; localError = null; viewModel.limpiarError() },
                     label = { Text("Teléfono de contacto") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
@@ -147,7 +147,7 @@ fun RegisterScreen(
 
                 OutlinedTextField(
                     value = ciudad,
-                    onValueChange = { ciudad = it },
+                    onValueChange = { ciudad = it; localError = null; viewModel.limpiarError() },
                     label = { Text("Ciudad") },
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
@@ -159,7 +159,7 @@ fun RegisterScreen(
 
             OutlinedTextField(
                 value = password,
-                onValueChange = { password = it },
+                onValueChange = { password = it; localError = null; viewModel.limpiarError() },
                 label = { Text("Contraseña") },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
@@ -172,7 +172,7 @@ fun RegisterScreen(
 
             OutlinedTextField(
                 value = confirmPassword,
-                onValueChange = { confirmPassword = it },
+                onValueChange = { confirmPassword = it; localError = null; viewModel.limpiarError() },
                 label = { Text("Confirmar contraseña") },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
@@ -199,12 +199,19 @@ fun RegisterScreen(
                         nombre.isBlank() || email.isBlank() || password.isBlank() ->
                             "Completa todos los campos obligatorios"
                         !email.contains("@") -> "Ingresa un correo válido"
-                        password.length < 6 -> "La contraseña debe tener mínimo 6 caracteres"
+                        password.length < 8 -> "La contraseña debe tener mínimo 8 caracteres"
                         password != confirmPassword -> "Las contraseñas no coinciden"
                         rolSeleccionado == RolUsuario.PROPIETARIO && telefono.isBlank() ->
                             "Ingresa un teléfono de contacto"
                         else -> {
-                            viewModel.register(email, password, rolSeleccionado) {
+                            viewModel.register(
+                                email = email,
+                                password = password,
+                                rol = rolSeleccionado,
+                                nombre = nombre,
+                                telefono = telefono.ifBlank { null },
+                                ciudad = ciudad.ifBlank { null }
+                            ) {
                                 onRegisterSuccess(rolSeleccionado)
                             }
                             null

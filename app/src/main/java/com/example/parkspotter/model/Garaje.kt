@@ -1,9 +1,9 @@
 package com.example.parkspotter.model
 
 /**
- * Representa un garaje publicado por un propietario.
- * Es el modelo "fuente" que luego se traduce a ParkingSpot para mostrarse
- * en el mapa (MainActivity.kt), una vez el garaje está activo.
+ * Garaje publicado por un propietario. Se muestra en el mapa (MainActivity.kt)
+ * cuando está activo. lat/lng son null mientras el propietario no haya
+ * definido la ubicación en el formulario.
  */
 data class Garaje(
     val id: String = "",
@@ -15,8 +15,8 @@ data class Garaje(
     val espaciosTotales: Int = 1,
     val espaciosDisponibles: Int = 1,
     val fotos: List<String> = emptyList(),
-    val lat: Double = 4.6782,
-    val lng: Double = -74.0582,
+    val lat: Double? = null,
+    val lng: Double? = null,
     val activo: Boolean = true,
     val distanciaKm: Double? = null
 )
