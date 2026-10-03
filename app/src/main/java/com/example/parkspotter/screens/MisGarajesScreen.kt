@@ -7,8 +7,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -32,13 +36,42 @@ import com.example.parkspotter.viewmodel.GarajeViewModel
 @Composable
 fun MisGarajesScreen(
     onAgregarGaraje: () -> Unit,
-    onVerMapa: () -> Unit
+    onEditarGaraje: (String) -> Unit,
+    onVerMapa: () -> Unit,
+    onPerfil: () -> Unit
 ) {
     val context = LocalContext.current
     val viewModel: GarajeViewModel = viewModel(factory = GarajeViewModel.factory(context))
     val garajes by viewModel.garajes.collectAsState()
     val isLoading by viewModel.loading.collectAsState()
     val errorMessage by viewModel.error.collectAsState()
+    var garajeAEliminar by remember { mutableStateOf<Garaje?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Errores de acciones sobre la lista (toggle, cupos, eliminar) se muestran como snackbar.
+    LaunchedEffect(errorMessage) {
+        if (errorMessage != null && garajes.isNotEmpty()) {
+            snackbarHostState.showSnackbar(errorMessage!!)
+            viewModel.limpiarError()
+        }
+    }
+
+    garajeAEliminar?.let { g ->
+        AlertDialog(
+            onDismissRequest = { garajeAEliminar = null },
+            title = { Text("Eliminar garaje") },
+            text = { Text("¿Seguro que quieres eliminar \"${g.nombre}\"? Esta acción no se puede deshacer.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.eliminarGaraje(g.id)
+                    garajeAEliminar = null
+                }) { Text("Eliminar", color = RedError) }
+            },
+            dismissButton = {
+                TextButton(onClick = { garajeAEliminar = null }) { Text("Cancelar") }
+            }
+        )
+    }
 
     // Se recarga cada vez que la pantalla vuelve a componerse (p. ej. al
     // regresar de RegistrarGarajeScreen), así la lista siempre queda al día.
@@ -55,10 +88,14 @@ fun MisGarajesScreen(
                     IconButton(onClick = onVerMapa) {
                         Icon(Icons.Filled.Map, contentDescription = "Ver mapa", tint = SurfaceWhite)
                     }
+                    IconButton(onClick = onPerfil) {
+                        Icon(Icons.Filled.Person, contentDescription = "Mi perfil", tint = SurfaceWhite)
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = BluePrimary)
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onAgregarGaraje,
@@ -116,7 +153,12 @@ fun MisGarajesScreen(
                             garaje = garaje,
                             onToggleActivo = { activo ->
                                 viewModel.cambiarDisponibilidad(garaje.id, activo)
-                            }
+                            },
+                            onCambiarEspacios = { nuevos ->
+                                viewModel.cambiarEspaciosDisponibles(garaje.id, nuevos)
+                            },
+                            onEditar = { onEditarGaraje(garaje.id) },
+                            onEliminar = { garajeAEliminar = garaje }
                         )
                     }
                 }
@@ -126,7 +168,13 @@ fun MisGarajesScreen(
 }
 
 @Composable
-private fun GarajeCard(garaje: Garaje, onToggleActivo: (Boolean) -> Unit) {
+private fun GarajeCard(
+    garaje: Garaje,
+    onToggleActivo: (Boolean) -> Unit,
+    onCambiarEspacios: (Int) -> Unit,
+    onEditar: () -> Unit,
+    onEliminar: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -150,16 +198,37 @@ private fun GarajeCard(garaje: Garaje, onToggleActivo: (Boolean) -> Unit) {
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             InfoChip(
                 titulo = "$${garaje.precioPorHora}/hora",
                 modifier = Modifier.weight(1f)
             )
-            InfoChip(
-                titulo = "${garaje.espaciosDisponibles}/${garaje.espaciosTotales} disp.",
-                modifier = Modifier.weight(1f)
-            )
+            // Cupos libres en este momento: el conductor los ve en el mapa en tiempo real.
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(BackgroundGray),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                IconButton(
+                    onClick = { onCambiarEspacios(garaje.espaciosDisponibles - 1) },
+                    enabled = garaje.espaciosDisponibles > 0,
+                    modifier = Modifier.size(34.dp)
+                ) { Icon(Icons.Filled.Remove, contentDescription = "Un cupo menos", modifier = Modifier.size(16.dp)) }
+                Text(
+                    "${garaje.espaciosDisponibles}/${garaje.espaciosTotales} disp.",
+                    color = TextDark, fontSize = 13.sp, fontWeight = FontWeight.Medium
+                )
+                IconButton(
+                    onClick = { onCambiarEspacios(garaje.espaciosDisponibles + 1) },
+                    enabled = garaje.espaciosDisponibles < garaje.espaciosTotales,
+                    modifier = Modifier.size(34.dp)
+                ) { Icon(Icons.Filled.Add, contentDescription = "Un cupo más", modifier = Modifier.size(16.dp)) }
+            }
         }
 
         Spacer(modifier = Modifier.height(14.dp))
@@ -171,6 +240,12 @@ private fun GarajeCard(garaje: Garaje, onToggleActivo: (Boolean) -> Unit) {
                 fontSize = 12.sp,
                 modifier = Modifier.weight(1f)
             )
+            IconButton(onClick = onEditar) {
+                Icon(Icons.Filled.Edit, contentDescription = "Editar garaje", tint = BluePrimary)
+            }
+            IconButton(onClick = onEliminar) {
+                Icon(Icons.Filled.Delete, contentDescription = "Eliminar garaje", tint = RedError)
+            }
             Switch(
                 checked = garaje.activo,
                 onCheckedChange = onToggleActivo,

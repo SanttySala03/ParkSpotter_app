@@ -33,8 +33,7 @@ import com.example.parkspotter.viewmodel.AuthViewModel
 @Composable
 fun LoginScreen(
     onLoginSuccess: (RolUsuario) -> Unit,
-    onNavigateToRegister: () -> Unit,
-    onGoogleLoginClick: () -> Unit = {}
+    onNavigateToRegister: () -> Unit
 ) {
     val context = LocalContext.current
     val viewModel: AuthViewModel = viewModel(factory = AuthViewModel.factory(context))
@@ -177,32 +176,6 @@ fun LoginScreen(
                 } else {
                     Text("Iniciar sesión", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 }
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                HorizontalDivider(modifier = Modifier.weight(1f), color = BorderGray)
-                Text(
-                    text = "  o continúa con  ",
-                    color = TextLight,
-                    fontSize = 12.sp
-                )
-                HorizontalDivider(modifier = Modifier.weight(1f), color = BorderGray)
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            OutlinedButton(
-                onClick = onGoogleLoginClick,
-                shape = RoundedCornerShape(12.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, BorderGray),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = TextDark),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp)
-            ) {
-                Text("Continuar con Google", fontSize = 15.sp, fontWeight = FontWeight.Medium)
             }
 
             Spacer(modifier = Modifier.height(28.dp))

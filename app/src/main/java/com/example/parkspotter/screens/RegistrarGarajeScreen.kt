@@ -1,5 +1,6 @@
 package com.example.parkspotter.screens
 
+import android.Manifest
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -18,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -33,23 +35,30 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.parkspotter.model.Garaje
 import com.example.parkspotter.ui.theme.*
+import com.example.parkspotter.util.LocationHelper
 import com.example.parkspotter.viewmodel.GarajeViewModel
+import kotlinx.coroutines.launch
 
 /**
- * Formulario para que un propietario publique un garaje en desuso.
+ * Formulario para que un propietario publique (garajeId = null) o edite un garaje.
  * onGarajeGuardado se dispara solo después de que el backend confirma
- * la creación (respuesta 2xx de POST /garajes).
+ * la operación (respuesta 2xx de POST / PUT /garajes).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegistrarGarajeScreen(
-    onGarajeGuardado: (Garaje) -> Unit,
+    garajeId: String? = null,
+    onGarajeGuardado: () -> Unit,
     onCancelar: () -> Unit
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val locationHelper = remember { LocationHelper(context) }
     val viewModel: GarajeViewModel = viewModel(factory = GarajeViewModel.factory(context))
     val isLoading by viewModel.loading.collectAsState()
     val backendError by viewModel.error.collectAsState()
+    val garajeEditando by viewModel.garajeEditando.collectAsState()
+    val esEdicion = garajeId != null
 
     var nombre by remember { mutableStateOf("") }
     var direccion by remember { mutableStateOf("") }
@@ -57,8 +66,65 @@ fun RegistrarGarajeScreen(
     var precio by remember { mutableStateOf("") }
     var espacios by remember { mutableStateOf("1") }
     var fotos by remember { mutableStateOf<List<Uri>>(emptyList()) }
+    var ubicacion by remember { mutableStateOf<Pair<Double, Double>?>(null) }
+    var buscandoUbicacion by remember { mutableStateOf(false) }
     var localError by remember { mutableStateOf<String?>(null) }
     val errorMessage = localError ?: backendError
+
+    // Modo edición: carga el garaje y rellena el formulario.
+    LaunchedEffect(garajeId) { garajeId?.let { viewModel.cargarGaraje(it) } }
+    LaunchedEffect(garajeEditando) {
+        garajeEditando?.let { g ->
+            nombre = g.nombre
+            direccion = g.direccion
+            descripcion = g.descripcion
+            precio = g.precioPorHora.toString()
+            espacios = g.espaciosTotales.toString()
+            fotos = g.fotos.map { Uri.parse(it) }
+            if (g.lat != null && g.lng != null) ubicacion = g.lat to g.lng
+        }
+    }
+
+    fun usarUbicacionActual() {
+        scope.launch {
+            buscandoUbicacion = true
+            val actual = locationHelper.obtenerUbicacionActual()
+            buscandoUbicacion = false
+            if (actual != null) {
+                ubicacion = actual
+                localError = null
+            } else {
+                localError = "No pudimos obtener tu ubicación. Activa el GPS o escribe la dirección completa."
+            }
+        }
+    }
+
+    val permisoUbicacion = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { concedido ->
+        if (concedido) usarUbicacionActual()
+        else localError = "Sin permiso de ubicación: escribe la dirección completa y la ubicaremos."
+    }
+
+    fun guardar(base: Garaje) {
+        scope.launch {
+            var coords = ubicacion
+            if (coords == null) {
+                // Sin GPS: se intenta ubicar la dirección escrita (Geocoder de Android).
+                buscandoUbicacion = true
+                coords = locationHelper.geocodificar(direccion)
+                buscandoUbicacion = false
+                if (coords == null) {
+                    localError = "No encontramos esa dirección en el mapa. Usa \"Usar mi ubicación actual\"."
+                    return@launch
+                }
+                ubicacion = coords
+            }
+            viewModel.guardarGaraje(base.copy(lat = coords.first, lng = coords.second)) { exito ->
+                if (exito) onGarajeGuardado()
+            }
+        }
+    }
 
     val pickImagesLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents()
@@ -68,7 +134,12 @@ fun RegistrarGarajeScreen(
         containerColor = BackgroundGray,
         topBar = {
             TopAppBar(
-                title = { Text("Publicar garaje", color = SurfaceWhite, fontWeight = FontWeight.SemiBold) },
+                title = {
+                    Text(
+                        if (esEdicion) "Editar garaje" else "Publicar garaje",
+                        color = SurfaceWhite, fontWeight = FontWeight.SemiBold
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onCancelar) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = "Volver", tint = SurfaceWhite)
@@ -146,7 +217,7 @@ fun RegistrarGarajeScreen(
 
             OutlinedTextField(
                 value = nombre,
-                onValueChange = { nombre = it },
+                onValueChange = { nombre = it; localError = null; viewModel.limpiarError() },
                 label = { Text("Nombre del garaje") },
                 placeholder = { Text("Ej: Garaje Chapinero") },
                 singleLine = true,
@@ -158,7 +229,7 @@ fun RegistrarGarajeScreen(
 
             OutlinedTextField(
                 value = direccion,
-                onValueChange = { direccion = it },
+                onValueChange = { direccion = it; ubicacion = null; localError = null; viewModel.limpiarError() },
                 label = { Text("Dirección") },
                 placeholder = { Text("Calle, barrio, Bogotá") },
                 singleLine = true,
@@ -166,11 +237,39 @@ fun RegistrarGarajeScreen(
                 colors = garajeFieldColors(),
                 modifier = Modifier.fillMaxWidth()
             )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Ubicación en el mapa (necesaria para que los conductores lo encuentren — Sprint 3)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                OutlinedButton(
+                    onClick = {
+                        if (locationHelper.tienePermiso()) usarUbicacionActual()
+                        else permisoUbicacion.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                    },
+                    enabled = !buscandoUbicacion,
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Filled.MyLocation, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Usar mi ubicación actual", fontSize = 13.sp)
+                }
+                if (buscandoUbicacion) {
+                    Spacer(modifier = Modifier.width(10.dp))
+                    CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                }
+            }
+            Text(
+                text = ubicacion?.let { "📍 Ubicación: %.5f, %.5f".format(it.first, it.second) }
+                    ?: "Si no usas tu ubicación, la buscaremos a partir de la dirección.",
+                color = if (ubicacion != null) GreenAccentDark else TextMedium,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(top = 4.dp)
+            )
             Spacer(modifier = Modifier.height(16.dp))
 
             OutlinedTextField(
                 value = descripcion,
-                onValueChange = { descripcion = it },
+                onValueChange = { descripcion = it; localError = null; viewModel.limpiarError() },
                 label = { Text("Descripción") },
                 placeholder = { Text("Ej: Garaje techado, fácil acceso, cámara de seguridad") },
                 minLines = 3,
@@ -221,26 +320,27 @@ fun RegistrarGarajeScreen(
                         precioInt == null || precioInt <= 0 -> "Ingresa un precio válido"
                         espaciosInt == null || espaciosInt <= 0 -> "Ingresa un número de espacios válido"
                         else -> {
-                            val garaje = Garaje(
-                                nombre = nombre,
-                                direccion = direccion,
-                                descripcion = descripcion,
-                                precioPorHora = precioInt,
-                                espaciosTotales = espaciosInt,
-                                espaciosDisponibles = espaciosInt,
-                                // Nota: son URIs locales del celular, aún no se suben a
-                                // ningún storage (Firebase/S3) — pendiente fuera de Sprint 2.
-                                fotos = fotos.map { it.toString() },
-                                activo = true
+                            val anterior = garajeEditando
+                            guardar(
+                                Garaje(
+                                    id = garajeId ?: "",
+                                    nombre = nombre,
+                                    direccion = direccion,
+                                    descripcion = descripcion,
+                                    precioPorHora = precioInt,
+                                    espaciosTotales = espaciosInt,
+                                    espaciosDisponibles = anterior?.espaciosDisponibles ?: espaciosInt,
+                                    // Nota: son URIs locales del celular, aún no se suben a
+                                    // ningún storage (Firebase/S3) — pendiente.
+                                    fotos = fotos.map { it.toString() },
+                                    activo = anterior?.activo ?: true
+                                )
                             )
-                            viewModel.publicarGaraje(garaje) { exito ->
-                                if (exito) onGarajeGuardado(garaje)
-                            }
                             null
                         }
                     }
                 },
-                enabled = !isLoading,
+                enabled = !isLoading && !buscandoUbicacion,
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = GreenAccentDark, contentColor = SurfaceWhite),
                 modifier = Modifier
@@ -254,7 +354,10 @@ fun RegistrarGarajeScreen(
                         modifier = Modifier.size(20.dp)
                     )
                 } else {
-                    Text("Publicar garaje", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        if (esEdicion) "Guardar cambios" else "Publicar garaje",
+                        fontSize = 16.sp, fontWeight = FontWeight.SemiBold
+                    )
                 }
             }
 

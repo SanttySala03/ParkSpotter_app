@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -68,7 +69,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun ParkSpotterApp() {
+fun ParkSpotterApp(onPerfil: () -> Unit = {}) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val locationHelper = remember { LocationHelper(context) }
@@ -149,7 +150,8 @@ fun ParkSpotterApp() {
             texto = filtros.texto,
             onTextoChange = { viewModel.actualizarFiltros(filtros.copy(texto = it)) },
             onBuscar = { viewModel.buscarGarajes(mostrarCargando = false) },
-            onFiltrosClick = { showFilterSheet = true }
+            onFiltrosClick = { showFilterSheet = true },
+            onPerfilClick = onPerfil
         )
 
         if (isLoading) {
@@ -194,7 +196,9 @@ fun ParkSpotterApp() {
             enter = slideInVertically(initialOffsetY = { it }),
             exit = slideOutVertically(targetOffsetY = { it })
         ) {
-            selectedParking?.let { parking ->
+            // Con el refresco en vivo, el detalle muestra siempre los datos más recientes del garaje.
+            val actualizado = selectedParking?.let { sel -> garajes.firstOrNull { it.id == sel.id } ?: sel }
+            actualizado?.let { parking ->
                 ParkingBottomSheet(
                     parking = parking,
                     onDismiss = { showBottomSheet = false },
@@ -224,9 +228,16 @@ fun ParkSpotterMap(
     onParkingSelected: (Garaje) -> Unit
 ) {
     var mapRef by remember { mutableStateOf<MapView?>(null) }
+    var styleListo by remember { mutableStateOf(false) }
+    // Los callbacks del mapa se registran una sola vez; con rememberUpdatedState
+    // siempre leen la lista de garajes MÁS RECIENTE (si no, quedaba la lista vacía inicial).
+    val parkingsActuales by rememberUpdatedState(parkings)
+    val onSelectedActual by rememberUpdatedState(onParkingSelected)
 
-    // Repinta las fuentes GeoJSON cada vez que cambian los garajes (refresco en vivo, Sprint 3).
-    LaunchedEffect(parkings, userLocation) {
+    // Repinta las fuentes GeoJSON cada vez que cambian los garajes (refresco en vivo, Sprint 3)
+    // o cuando el estilo termina de cargar.
+    LaunchedEffect(parkings, userLocation, styleListo) {
+        if (!styleListo) return@LaunchedEffect
         val map = mapRef ?: return@LaunchedEffect
         map.getMapAsync { m ->
             m.style?.let { style ->
@@ -238,27 +249,49 @@ fun ParkSpotterMap(
         }
     }
 
+    // El MapView de MapLibre necesita recibir los eventos del ciclo de vida.
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle, mapRef) {
+        val mv = mapRef
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            when (event) {
+                androidx.lifecycle.Lifecycle.Event.ON_START -> mv?.onStart()
+                androidx.lifecycle.Lifecycle.Event.ON_RESUME -> mv?.onResume()
+                androidx.lifecycle.Lifecycle.Event.ON_PAUSE -> mv?.onPause()
+                androidx.lifecycle.Lifecycle.Event.ON_STOP -> mv?.onStop()
+                else -> Unit
+            }
+        }
+        lifecycle.addObserver(observer)
+        onDispose {
+            lifecycle.removeObserver(observer)
+        }
+    }
+
     AndroidView(
         modifier = Modifier.fillMaxSize(),
         factory = { context ->
             MapView(context).also { mv ->
+                mv.onCreate(null)
                 mapRef = mv
                 onMapReady(mv)
                 mv.getMapAsync { map ->
                     map.setStyle("https://tiles.openfreemap.org/styles/liberty") { style ->
 
-                        map.animateCamera(
+                        map.moveCamera(
                             CameraUpdateFactory.newCameraPosition(
                                 CameraPosition.Builder()
-                                    .target(BOGOTA_DEFAULT)
-                                    .zoom(12.0)
+                                    .target(
+                                        userLocation?.let { LatLng(it.first, it.second) } ?: BOGOTA_DEFAULT
+                                    )
+                                    .zoom(if (userLocation != null) 14.0 else 12.0)
                                     .build()
                             )
                         )
 
                         style.addSource(
                             org.maplibre.android.style.sources.GeoJsonSource(
-                                "parkings-source", buildGarajesGeoJson(parkings)
+                                "parkings-source", buildGarajesGeoJson(parkingsActuales)
                             )
                         )
                         style.addLayer(
@@ -295,23 +328,25 @@ fun ParkSpotterMap(
                             val features = map.queryRenderedFeatures(pixel, "parkings-layer")
                             if (features.isNotEmpty()) {
                                 val id = features[0].getStringProperty("id")
-                                val parking = parkings.firstOrNull { it.id == id }
+                                val parking = parkingsActuales.firstOrNull { it.id == id }
                                 if (parking != null) {
-                                    onParkingSelected(parking)
+                                    onSelectedActual(parking)
                                     return@addOnMapClickListener true
                                 }
                             }
                             false
                         }
+                        styleListo = true
                     }
                 }
             }
-        }
+        },
+        onRelease = { mv -> mv.onDestroy() }
     )
 }
 
 private fun buildGarajesGeoJson(parkings: List<Garaje>): String {
-    val features = parkings.joinToString(",") { parking ->
+    val features = parkings.filter { it.lat != null && it.lng != null }.joinToString(",") { parking ->
         val color = when (parking.status()) {
             ParkingStatus.AVAILABLE -> "#059669"
             ParkingStatus.FULL -> "#EF4444"
@@ -319,7 +354,7 @@ private fun buildGarajesGeoJson(parkings: List<Garaje>): String {
         """
         {
             "type": "Feature",
-            "properties": { "id": "${parking.id}", "color": "$color", "name": "${parking.nombre}" },
+            "properties": { "id": "${parking.id}", "color": "$color", "name": "${parking.nombre.replace("\\", "").replace("\"", "'")}" },
             "geometry": { "type": "Point", "coordinates": [${parking.lng}, ${parking.lat}] }
         }
         """
@@ -346,7 +381,8 @@ fun TopNavBar(
     texto: String,
     onTextoChange: (String) -> Unit,
     onBuscar: () -> Unit,
-    onFiltrosClick: () -> Unit
+    onFiltrosClick: () -> Unit,
+    onPerfilClick: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -391,6 +427,16 @@ fun TopNavBar(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(Icons.Default.FilterList, contentDescription = "Filtros", tint = BluePrimary, modifier = Modifier.size(18.dp))
+                }
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(Blue50)
+                        .clickable { onPerfilClick() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Person, contentDescription = "Mi perfil", tint = BluePrimary, modifier = Modifier.size(18.dp))
                 }
             }
         }

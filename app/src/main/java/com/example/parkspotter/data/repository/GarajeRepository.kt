@@ -19,8 +19,10 @@ class GarajeRepository(private val api: GarajeApi) {
         soloDisponibles: Boolean? = null,
         texto: String? = null
     ): Resource<List<Garaje>> = mapList {
-        api.buscar(lat, lng, radioKm, precioMax, soloDisponibles, texto?.takeIf { it.isNotBlank() })
+        api.buscar(lat, lng, radioKm, precioMax, soloDisponibles, texto?.trim()?.takeIf { it.isNotBlank() })
     }
+
+    suspend fun obtener(id: String): Resource<Garaje> = mapOne { api.obtener(id) }
 
     suspend fun listarMios(): Resource<List<Garaje>> = mapList { api.listarMios() }
 
@@ -29,8 +31,11 @@ class GarajeRepository(private val api: GarajeApi) {
     suspend fun actualizar(id: String, garaje: Garaje): Resource<Garaje> =
         mapOne { api.actualizar(id, garaje.toRequest()) }
 
-    suspend fun actualizarDisponibilidad(id: String, activo: Boolean): Resource<Garaje> =
-        mapOne { api.actualizarDisponibilidad(id, DisponibilidadRequest(activo)) }
+    suspend fun actualizarActivo(id: String, activo: Boolean): Resource<Garaje> =
+        mapOne { api.actualizarDisponibilidad(id, DisponibilidadRequest(activo = activo)) }
+
+    suspend fun actualizarEspacios(id: String, espaciosDisponibles: Int): Resource<Garaje> =
+        mapOne { api.actualizarDisponibilidad(id, DisponibilidadRequest(espaciosDisponibles = espaciosDisponibles)) }
 
     suspend fun eliminar(id: String): Resource<Unit> = safeApiCall { api.eliminar(id) }
 
@@ -55,14 +60,14 @@ class GarajeRepository(private val api: GarajeApi) {
     }
 
     private fun Garaje.toRequest() = GarajeRequest(
-        nombre = nombre,
-        direccion = direccion,
-        descripcion = descripcion,
+        nombre = nombre.trim(),
+        direccion = direccion.trim(),
+        descripcion = descripcion.trim().ifBlank { null },
         precioPorHora = precioPorHora,
         espaciosTotales = espaciosTotales,
         fotos = fotos,
-        lat = lat,
-        lng = lng
+        lat = requireNotNull(lat) { "El garaje no tiene ubicación" },
+        lng = requireNotNull(lng) { "El garaje no tiene ubicación" }
     )
 
     private fun GarajeResponse.toModel() = Garaje(
@@ -74,7 +79,7 @@ class GarajeRepository(private val api: GarajeApi) {
         precioPorHora = precioPorHora,
         espaciosTotales = espaciosTotales,
         espaciosDisponibles = espaciosDisponibles,
-        fotos = fotos,
+        fotos = fotos ?: emptyList(),
         lat = lat,
         lng = lng,
         activo = activo,
