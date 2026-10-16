@@ -13,18 +13,35 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
-/** Cliente Retrofit único, compartido por AuthApi y GarajeApi. */
+/** Cliente Retrofit único, compartido por AuthApi, GarajeApi y ReservaApi. */
 object ApiClient {
 
     private val PUBLIC_AUTH_PATHS = setOf("auth/register", "auth/login", "auth/refresh", "auth/logout")
 
     @Volatile private var retrofit: Retrofit? = null
+    @Volatile private var sseClient: OkHttpClient? = null
 
     fun createAuthApi(context: Context): AuthApi =
         getRetrofit(context).create(AuthApi::class.java)
 
     fun createGarajeApi(context: Context): GarajeApi =
         getRetrofit(context).create(GarajeApi::class.java)
+
+    fun createReservaApi(context: Context): ReservaApi =
+        getRetrofit(context).create(ReservaApi::class.java)
+
+    /**
+     * Cliente para los streams SSE de disponibilidad (Sprint 3). Sin timeout de lectura:
+     * la conexión queda abierta y el backend envía un "ping" cada 25 s.
+     */
+    fun sseHttpClient(context: Context): OkHttpClient =
+        sseClient ?: synchronized(this) {
+            sseClient ?: (getRetrofit(context).callFactory() as OkHttpClient).newBuilder()
+                .readTimeout(0, TimeUnit.MILLISECONDS)
+                .retryOnConnectionFailure(true)
+                .build()
+                .also { sseClient = it }
+        }
 
     private fun getRetrofit(context: Context): Retrofit =
         retrofit ?: synchronized(this) {
@@ -47,8 +64,10 @@ object ApiClient {
             chain.proceed(request.build())
         }
 
+        // ISO/IEC 27001: el log nunca muestra tokens (ni el header ni los cuerpos de /auth).
         val logging = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
+            level = HttpLoggingInterceptor.Level.BASIC
+            redactHeader("Authorization")
         }
 
         // Cliente "limpio" (sin authenticator) solo para renovar el token.

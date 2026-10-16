@@ -6,7 +6,6 @@ import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.PATCH
 import retrofit2.http.POST
-import retrofit2.http.PUT
 
 interface AuthApi {
     @POST("auth/login")
@@ -20,10 +19,6 @@ interface AuthApi {
 
     @GET("auth/me")
     suspend fun me(): Response<UserResponse>
-
-    // Sprint 1 — gestionar perfil
-    @PUT("auth/me")
-    suspend fun actualizarPerfil(@Body body: UpdateProfileRequest): Response<UserResponse>
 
     @PATCH("auth/password")
     suspend fun cambiarPassword(@Body body: ChangePasswordRequest): Response<Unit>

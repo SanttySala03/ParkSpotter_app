@@ -1,12 +1,12 @@
 package com.example.parkspotter.viewmodel
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.parkspotter.data.remote.ApiClient
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.parkspotter.data.AppContainer
 import com.example.parkspotter.data.repository.AuthRepository
-import com.example.parkspotter.data.session.SessionManager
 import com.example.parkspotter.model.RolUsuario
 import com.example.parkspotter.model.Usuario
 import com.example.parkspotter.util.Resource
@@ -34,13 +34,12 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
             _error.value = null
             when (val result = repository.login(email, password)) {
                 is Resource.Success -> {
-                    val rol = repository.sincronizarRol()
                     _loading.value = false
-                    onResult(rol)
+                    onResult(repository.rolGuardado())
                 }
                 is Resource.Error -> {
                     _loading.value = false
-                    _error.value = result.message
+                    _error.value = if (result.codigo == 401) "Correo o contraseña incorrectos" else result.message
                 }
                 Resource.Loading -> Unit
             }
@@ -66,7 +65,7 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
                 }
                 is Resource.Error -> {
                     _loading.value = false
-                    _error.value = result.message
+                    _error.value = if (result.codigo == 409) "Ese correo ya tiene una cuenta. Inicia sesión." else result.message
                 }
                 Resource.Loading -> Unit
             }
@@ -87,22 +86,22 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
         }
     }
 
+    /** Nombre, teléfono y ciudad se guardan en el dispositivo (el backend aún no los tiene). */
     fun guardarPerfil(nombre: String, telefono: String, ciudad: String) {
-        viewModelScope.launch {
-            _loading.value = true
-            _error.value = null
-            _mensaje.value = null
-            when (val r = repository.actualizarPerfil(nombre, telefono.ifBlank { null }, ciudad.ifBlank { null })) {
-                is Resource.Success -> {
-                    _perfil.value = r.data
-                    _mensaje.value = "Perfil actualizado"
-                }
-                is Resource.Error -> _error.value = r.message
-                Resource.Loading -> Unit
-            }
-            _loading.value = false
-        }
+        _error.value = null
+        repository.guardarDatosPerfil(nombre, telefono, ciudad)?.let {
+            _perfil.value = it.copy(esAdmin = _perfil.value?.esAdmin == true)
+            _mensaje.value = "Perfil actualizado"
+        } ?: run { _error.value = "Inicia sesión de nuevo para editar tu perfil" }
     }
+
+    fun cambiarRol(rol: RolUsuario) {
+        repository.cambiarRol(rol)
+        _perfil.value = _perfil.value?.copy(rol = rol)
+        _mensaje.value = if (rol == RolUsuario.PROPIETARIO) "Modo propietario activado" else "Modo conductor activado"
+    }
+
+    fun rolActual(): RolUsuario = repository.rolGuardado()
 
     fun cambiarPassword(actual: String, nueva: String, onOk: () -> Unit) {
         viewModelScope.launch {
@@ -129,18 +128,12 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
     }
 
     fun limpiarError() { _error.value = null }
+    fun limpiarMensaje() { _mensaje.value = null }
     fun mostrarError(msg: String) { _error.value = msg }
 
     companion object {
-        fun factory(context: Context): ViewModelProvider.Factory =
-            object : ViewModelProvider.Factory {
-                @Suppress("UNCHECKED_CAST")
-                override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    val appContext = context.applicationContext
-                    val session = SessionManager(appContext)
-                    val api = ApiClient.createAuthApi(appContext)
-                    return AuthViewModel(AuthRepository(api, session)) as T
-                }
-            }
+        val Factory: ViewModelProvider.Factory = viewModelFactory {
+            initializer { AuthViewModel(AppContainer.authRepository) }
+        }
     }
 }

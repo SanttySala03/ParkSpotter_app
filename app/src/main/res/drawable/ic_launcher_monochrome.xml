@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Símbolo ParkSpotter: P + vehículo + plaza de parqueo (grilla 120x120, ver ui/components/Marca.kt) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group android:scaleX="0.55" android:scaleY="0.55" android:translateX="21" android:translateY="21">
+        <path android:fillColor="#FF000000" android:pathData="M30,8 H64 A16,16 0 0 1 80,24 V62 A16,16 0 0 1 64,78 H30 A16,16 0 0 1 14,62 V24 A16,16 0 0 1 30,8 Z"/>
+        <path android:fillColor="#FF000000" android:pathData="M26,40 H26 A12,12 0 0 1 38,52 V100 A12,12 0 0 1 26,112 H26 A12,12 0 0 1 14,100 V52 A12,12 0 0 1 26,40 Z"/>
+        <path android:fillColor="#FF000000" android:pathData="M86,15 A28,28 0 0 1 86,71 Z"/>
+    </group>
+</vector>

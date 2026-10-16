@@ -1,26 +1,35 @@
 package com.example.parkspotter.data.repository
 
+import com.example.parkspotter.data.local.PerfilLocalStore
 import com.example.parkspotter.data.remote.AuthApi
 import com.example.parkspotter.data.remote.ChangePasswordRequest
 import com.example.parkspotter.data.remote.LoginRequest
 import com.example.parkspotter.data.remote.LogoutRequest
 import com.example.parkspotter.data.remote.RegisterRequest
 import com.example.parkspotter.data.remote.TokenPairResponse
-import com.example.parkspotter.data.remote.UpdateProfileRequest
+import com.example.parkspotter.data.remote.UserResponse
 import com.example.parkspotter.data.session.SessionManager
 import com.example.parkspotter.model.RolUsuario
 import com.example.parkspotter.model.Usuario
 import com.example.parkspotter.util.Resource
 import com.example.parkspotter.util.safeApiCall
 
-class AuthRepository(private val api: AuthApi, private val session: SessionManager) {
+class AuthRepository(
+    private val api: AuthApi,
+    private val session: SessionManager,
+    private val perfiles: PerfilLocalStore
+) {
 
     suspend fun login(email: String, password: String): Resource<TokenPairResponse> {
         val result = safeApiCall { api.login(LoginRequest(email.trim(), password)) }
-        if (result is Resource.Success) saveTokens(result.data)
+        if (result is Resource.Success) saveTokens(result.data, email)
         return result
     }
 
+    /**
+     * El backend solo registra correo y contraseña. Nombre, teléfono, ciudad y modo de uso
+     * quedan en el dispositivo (PerfilLocalStore) hasta que la API los soporte.
+     */
     suspend fun register(
         email: String,
         password: String,
@@ -29,39 +38,40 @@ class AuthRepository(private val api: AuthApi, private val session: SessionManag
         telefono: String?,
         ciudad: String?
     ): Resource<TokenPairResponse> {
-        val result = safeApiCall {
-            api.register(RegisterRequest(email.trim(), password, rol.name, nombre.trim(), telefono, ciudad))
-        }
+        val correo = email.trim()
+        val result = safeApiCall { api.register(RegisterRequest(correo, password)) }
         if (result is Resource.Success) {
-            saveTokens(result.data)
-            session.rolLocal = rol
+            saveTokens(result.data, correo)
+            perfiles.guardarRol(correo, rol)
+            perfiles.guardarDatos(correo, nombre, telefono.orEmpty(), ciudad.orEmpty())
         }
         return result
     }
 
-    /** Confirma contra el backend qué rol tiene realmente el usuario (tras login). */
-    suspend fun sincronizarRol(): RolUsuario {
-        val result = safeApiCall { api.me() }
-        val rol = if (result is Resource.Success) result.data.toModel().rol else session.rolLocal
-        session.rolLocal = rol
-        return rol
+    /** Modo de uso guardado para el usuario de la sesión (CONDUCTOR si no eligió). */
+    fun rolGuardado(): RolUsuario = session.email?.let { perfiles.rol(it) } ?: RolUsuario.CONDUCTOR
+
+    fun cambiarRol(rol: RolUsuario) {
+        session.email?.let { perfiles.guardarRol(it, rol) }
     }
 
-    // ── Sprint 1: gestionar perfil ──
     suspend fun obtenerPerfil(): Resource<Usuario> = when (val r = safeApiCall { api.me() }) {
-        is Resource.Success -> Resource.Success(r.data.toModel())
-        is Resource.Error -> Resource.Error(r.message)
+        is Resource.Success -> {
+            session.email = r.data.email
+            Resource.Success(r.data.aUsuario())
+        }
+        is Resource.Error -> r
         Resource.Loading -> Resource.Loading
     }
 
-    suspend fun actualizarPerfil(nombre: String, telefono: String?, ciudad: String?): Resource<Usuario> =
-        when (val r = safeApiCall {
-            api.actualizarPerfil(UpdateProfileRequest(nombre.trim(), telefono?.trim(), ciudad?.trim()))
-        }) {
-            is Resource.Success -> Resource.Success(r.data.toModel())
-            is Resource.Error -> Resource.Error(r.message)
-            Resource.Loading -> Resource.Loading
-        }
+    fun guardarDatosPerfil(nombre: String, telefono: String, ciudad: String): Usuario? {
+        val email = session.email ?: return null
+        perfiles.guardarDatos(email, nombre, telefono, ciudad)
+        return Usuario(
+            id = session.userId.orEmpty(), email = email, nombre = nombre.trim(),
+            telefono = telefono.trim(), ciudad = ciudad.trim(), rol = perfiles.rol(email)
+        )
+    }
 
     suspend fun cambiarPassword(actual: String, nueva: String): Resource<Unit> =
         safeApiCall { api.cambiarPassword(ChangePasswordRequest(actual, nueva)) }
@@ -72,21 +82,22 @@ class AuthRepository(private val api: AuthApi, private val session: SessionManag
         session.clear()
     }
 
-    private fun saveTokens(tokens: TokenPairResponse) {
+    private fun saveTokens(tokens: TokenPairResponse, emailIngresado: String) {
         session.accessToken = tokens.accessToken
         session.refreshToken = tokens.refreshToken
-        tokens.email?.let { session.email = it }
+        session.userId = tokens.userId
+        session.email = tokens.email ?: emailIngresado.trim()
     }
 
-    private fun com.example.parkspotter.data.remote.UserResponse.toModel() = Usuario(
+    private fun UserResponse.aUsuario() = Usuario(
         id = id,
-        nombre = nombre ?: "",
         email = email,
-        telefono = telefono ?: "",
-        ciudad = ciudad ?: "",
-        rol = if (roles.contains("ROLE_PROPIETARIO")) RolUsuario.PROPIETARIO else RolUsuario.CONDUCTOR
+        nombre = perfiles.nombre(email),
+        telefono = perfiles.telefono(email),
+        ciudad = perfiles.ciudad(email),
+        rol = perfiles.rol(email),
+        esAdmin = roles.orEmpty().contains("ROLE_ADMIN")
     )
 
     fun isLoggedIn(): Boolean = session.isLoggedIn
-    fun rolGuardado(): RolUsuario = session.rolLocal
 }

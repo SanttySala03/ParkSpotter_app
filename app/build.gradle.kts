@@ -1,7 +1,17 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.kotlinCompose)
 }
+
+// URL del backend: se puede cambiar sin tocar código agregando en local.properties
+//   parkspotter.apiUrl=http://192.168.1.15:8080/api/v1/
+// (útil para probar en un celular físico). Por defecto apunta al PC desde el emulador.
+val localProps = Properties().apply {
+    rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+}
+val apiBaseUrl: String = localProps.getProperty("parkspotter.apiUrl") ?: "http://10.0.2.2:8080/api/v1/"
 
 android {
     namespace = "com.example.parkspotter"
@@ -11,10 +21,11 @@ android {
         applicationId = "com.example.parkspotter"
         minSdk = 24
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 4
+        versionName = "0.4.0-sprint4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
     }
 
     buildTypes {
@@ -29,9 +40,21 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        // java.time (fechas y horas de reservas y horarios) en Android 7 (minSdk 24)
+        isCoreLibraryDesugaringEnabled = true
     }
     buildFeatures {
         compose = true
+        buildConfig = true
+    }
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+        // Robolectric renderiza las pantallas Compose en la JVM (capturas sin emulador)
+        unitTests.isIncludeAndroidResources = true
+        unitTests.all {
+            it.systemProperty("parkspotter.apiUrl", System.getenv("PARKSPOTTER_API") ?: "")
+            System.getenv("PARKSPOTTER_SHOTS")?.let { dir -> it.systemProperty("parkspotter.shots", dir) }
+        }
     }
 }
 
@@ -64,17 +87,30 @@ dependencies {
     // LocalLifecycleOwner para pasar el ciclo de vida al MapView de MapLibre (Sprint 3)
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
 
-    // Cliente HTTP hacia el backend Spring Boot (ApiClient, AuthApi, GarajeApi)
+    // Cliente HTTP hacia el backend Spring Boot (ApiClient, AuthApi, GarajeApi, ReservaApi)
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    // Disponibilidad en tiempo real por Server-Sent Events (Sprint 3)
+    implementation("com.squareup.okhttp3:okhttp-sse:4.12.0")
+
+    // Tokens cifrados en el dispositivo (Definition of Done: EncryptedSharedPreferences)
+    implementation("androidx.security:security-crypto:1.0.0")
 
     // Ubicación del dispositivo (LocationHelper — botón "mi ubicación" del mapa)
     implementation("com.google.android.gms:play-services-location:21.3.0")
 
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
+
     // Tests
     testImplementation(libs.junit)
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
+    testImplementation("org.json:json:20240303")
+    testImplementation("org.robolectric:robolectric:4.16")
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)

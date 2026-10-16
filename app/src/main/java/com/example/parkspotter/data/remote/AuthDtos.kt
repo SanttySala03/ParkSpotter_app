@@ -1,5 +1,8 @@
 package com.example.parkspotter.data.remote
 
+// Contrato de /api/v1/auth (backend rama develop). El registro solo recibe correo y contraseña:
+// nombre, teléfono, ciudad y modo de uso se guardan en el dispositivo (PerfilLocalStore).
+
 data class LoginRequest(
     val email: String,
     val password: String
@@ -7,18 +10,16 @@ data class LoginRequest(
 
 data class RegisterRequest(
     val email: String,
-    val password: String,
-    val rol: String,
-    val nombre: String? = null,
-    val telefono: String? = null,
-    val ciudad: String? = null
+    val password: String
 )
 
 data class TokenPairResponse(
     val userId: String?,
     val email: String?,
     val accessToken: String,
-    val refreshToken: String
+    val refreshToken: String,
+    val tokenType: String?,
+    val expiresInSeconds: Long?
 )
 
 data class RefreshRequest(val refreshToken: String)
@@ -28,16 +29,8 @@ data class LogoutRequest(val refreshToken: String)
 data class UserResponse(
     val id: String,
     val email: String,
-    val nombre: String?,
-    val telefono: String?,
-    val ciudad: String?,
-    val roles: List<String>
-)
-
-data class UpdateProfileRequest(
-    val nombre: String,
-    val telefono: String?,
-    val ciudad: String?
+    val roles: List<String>?,
+    val enabled: Boolean?
 )
 
 data class ChangePasswordRequest(

@@ -26,7 +26,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.parkspotter.model.RolUsuario
+import com.example.parkspotter.ui.components.LogoParkSpotter
+import com.example.parkspotter.ui.components.MarcaParkSpotter
 import com.example.parkspotter.ui.theme.*
+import com.example.parkspotter.util.esEmailValido
 import com.example.parkspotter.viewmodel.AuthViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -35,8 +38,7 @@ fun LoginScreen(
     onLoginSuccess: (RolUsuario) -> Unit,
     onNavigateToRegister: () -> Unit
 ) {
-    val context = LocalContext.current
-    val viewModel: AuthViewModel = viewModel(factory = AuthViewModel.factory(context))
+    val viewModel: AuthViewModel = viewModel(factory = AuthViewModel.Factory)
     val isLoading by viewModel.loading.collectAsState()
     val backendError by viewModel.error.collectAsState()
 
@@ -44,7 +46,10 @@ fun LoginScreen(
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var localError by remember { mutableStateOf<String?>(null) }
+    var mostrarRecuperar by remember { mutableStateOf(false) }
     val errorMessage = localError ?: backendError
+
+    IconosBarraEstado(fondoOscuro = false)
 
     Box(
         modifier = Modifier
@@ -54,23 +59,19 @@ fun LoginScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .systemBarsPadding()
+                .imePadding()
                 .padding(horizontal = 28.dp)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(64.dp))
+            Spacer(modifier = Modifier.height(40.dp))
 
-            // Encabezado con logo compacto
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Park", color = BluePrimary, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-                Text("Spotter", color = GreenAccentDark, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-            }
-            Text(
-                text = "Encuentra tu espacio",
-                color = TextMedium,
-                fontSize = 14.sp,
-                modifier = Modifier.padding(top = 4.dp, bottom = 40.dp)
-            )
+            // Logo de marca: P + vehículo + plaza de parqueo
+            LogoParkSpotter(modifier = Modifier.size(88.dp))
+            Spacer(modifier = Modifier.height(12.dp))
+            MarcaParkSpotter(tamano = 30.sp, eslogan = true)
+            Spacer(modifier = Modifier.height(36.dp))
 
             Text(
                 text = "Bienvenido de nuevo",
@@ -136,7 +137,7 @@ fun LoginScreen(
             }
 
             TextButton(
-                onClick = { /* TODO: recuperación de contraseña */ },
+                onClick = { mostrarRecuperar = true },
                 modifier = Modifier.align(Alignment.End)
             ) {
                 Text("¿Olvidaste tu contraseña?", color = BluePrimary, fontSize = 13.sp)
@@ -149,8 +150,8 @@ fun LoginScreen(
                     when {
                         email.isBlank() || password.isBlank() ->
                             localError = "Completa correo y contraseña"
-                        !email.contains("@") ->
-                            localError = "Ingresa un correo válido"
+                        !esEmailValido(email) ->
+                            localError = "Ingresa un correo válido, ej. nombre@dominio.com"
                         else -> {
                             localError = null
                             viewModel.login(email, password) { rol -> onLoginSuccess(rol) }
@@ -193,6 +194,20 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
         }
+    }
+
+    if (mostrarRecuperar) {
+        AlertDialog(
+            onDismissRequest = { mostrarRecuperar = false },
+            title = { Text("Recuperar contraseña") },
+            text = {
+                Text(
+                    "La recuperación por correo estará disponible cuando el backend publique el endpoint " +
+                        "(pendiente en el backlog). Mientras tanto, si recuerdas tu contraseña puedes cambiarla desde tu perfil."
+                )
+            },
+            confirmButton = { TextButton(onClick = { mostrarRecuperar = false }) { Text("Entendido") } }
+        )
     }
 }
 

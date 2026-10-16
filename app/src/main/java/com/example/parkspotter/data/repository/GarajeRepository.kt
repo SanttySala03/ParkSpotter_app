@@ -1,88 +1,97 @@
 package com.example.parkspotter.data.repository
 
-import com.example.parkspotter.data.remote.DisponibilidadRequest
+import com.example.parkspotter.data.remote.DisponibilidadEnVivo
 import com.example.parkspotter.data.remote.GarajeApi
-import com.example.parkspotter.data.remote.GarajeRequest
-import com.example.parkspotter.data.remote.GarajeResponse
+import com.example.parkspotter.data.remote.aModelo
+import com.example.parkspotter.data.remote.aRequest
+import com.example.parkspotter.data.remote.aUpdateRequest
+import com.example.parkspotter.model.AreaMapa
+import com.example.parkspotter.model.DisponibilidadGaraje
+import com.example.parkspotter.model.EstadoGaraje
+import com.example.parkspotter.model.EstadoPlaza
+import com.example.parkspotter.model.FiltrosBusqueda
 import com.example.parkspotter.model.Garaje
+import com.example.parkspotter.model.GarajeDetalle
+import com.example.parkspotter.model.Plaza
 import com.example.parkspotter.util.Resource
+import com.example.parkspotter.util.map
 import com.example.parkspotter.util.safeApiCall
-import retrofit2.Response
+import kotlinx.coroutines.flow.Flow
 
-class GarajeRepository(private val api: GarajeApi) {
+/** Resultado de los marcadores del mapa: truncado = hay más garajes de los que se pintaron. */
+data class MarcadoresMapa(val garajes: List<Garaje>, val truncado: Boolean)
 
-    suspend fun buscar(
-        lat: Double? = null,
-        lng: Double? = null,
-        radioKm: Double? = null,
-        precioMax: Int? = null,
-        soloDisponibles: Boolean? = null,
-        texto: String? = null
-    ): Resource<List<Garaje>> = mapList {
-        api.buscar(lat, lng, radioKm, precioMax, soloDisponibles, texto?.trim()?.takeIf { it.isNotBlank() })
-    }
+class GarajeRepository(
+    private val api: GarajeApi,
+    private val enVivo: DisponibilidadEnVivo? = null
+) {
 
-    suspend fun obtener(id: String): Resource<Garaje> = mapOne { api.obtener(id) }
+    // ── Sprint 3: conductor ──
 
-    suspend fun listarMios(): Resource<List<Garaje>> = mapList { api.listarMios() }
+    suspend fun buscar(filtros: FiltrosBusqueda, lat: Double?, lng: Double?): Resource<List<Garaje>> =
+        safeApiCall { api.buscar(filtros.aParametrosBusqueda(lat, lng)) }
+            .map { pagina -> pagina.content.orEmpty().map { it.aModelo() } }
 
-    suspend fun crear(garaje: Garaje): Resource<Garaje> = mapOne { api.crear(garaje.toRequest()) }
+    suspend fun marcadores(area: AreaMapa, filtros: FiltrosBusqueda): Resource<MarcadoresMapa> =
+        safeApiCall { api.marcadores(area.aParametros() + filtros.aParametros()) }
+            .map { r -> MarcadoresMapa(r.markers.orEmpty().map { it.aModelo() }, r.truncated == true) }
+
+    suspend fun detalle(id: String): Resource<GarajeDetalle> =
+        safeApiCall { api.detalle(id, incluirPlazas = true) }.map { it.aModelo() }
+
+    suspend fun disponibilidad(id: String): Resource<DisponibilidadGaraje> =
+        safeApiCall { api.disponibilidad(id) }.map { it.aModelo() }
+
+    /** Cambios en vivo de todos los garajes (SSE). Vacío si no se configuró el stream. */
+    fun disponibilidadEnVivo(): Flow<DisponibilidadGaraje>? = enVivo?.todos()
+
+    fun disponibilidadEnVivo(id: String): Flow<DisponibilidadGaraje>? = enVivo?.garaje(id)
+
+    // ── Sprint 2: propietario ──
+
+    suspend fun obtener(id: String): Resource<Garaje> = safeApiCall { api.obtener(id) }.map { it.aModelo() }
+
+    suspend fun listarMios(): Resource<List<Garaje>> =
+        safeApiCall { api.listarMios() }.map { lista -> lista.map { it.aModelo() } }
+
+    suspend fun crear(garaje: Garaje): Resource<Garaje> =
+        safeApiCall { api.crear(garaje.aRequest()) }.map { it.aModelo() }
 
     suspend fun actualizar(id: String, garaje: Garaje): Resource<Garaje> =
-        mapOne { api.actualizar(id, garaje.toRequest()) }
+        safeApiCall { api.actualizar(id, garaje.aUpdateRequest()) }.map { it.aModelo() }
 
-    suspend fun actualizarActivo(id: String, activo: Boolean): Resource<Garaje> =
-        mapOne { api.actualizarDisponibilidad(id, DisponibilidadRequest(activo = activo)) }
-
-    suspend fun actualizarEspacios(id: String, espaciosDisponibles: Int): Resource<Garaje> =
-        mapOne { api.actualizarDisponibilidad(id, DisponibilidadRequest(espaciosDisponibles = espaciosDisponibles)) }
+    /** Publicar (ACTIVE) u ocultar (INACTIVE) el garaje del mapa. */
+    suspend fun cambiarActivo(id: String, activo: Boolean): Resource<Garaje> =
+        safeApiCall { api.cambiarEstado(id, if (activo) EstadoGaraje.ACTIVE.name else EstadoGaraje.INACTIVE.name) }
+            .map { it.aModelo() }
 
     suspend fun eliminar(id: String): Resource<Unit> = safeApiCall { api.eliminar(id) }
 
-    private suspend fun mapList(
-        call: suspend () -> Response<List<GarajeResponse>>
-    ): Resource<List<Garaje>> {
-        return when (val result = safeApiCall(call)) {
-            is Resource.Success -> Resource.Success(result.data.map { it.toModel() })
-            is Resource.Error -> Resource.Error(result.message)
+    // ── Sprint 3: estado de las plazas (propietario) ──
+
+    suspend fun plazas(garajeId: String): Resource<List<Plaza>> =
+        safeApiCall { api.plazas(garajeId) }.map { lista -> lista.map { it.aModelo() } }
+
+    suspend fun cambiarEstadoPlaza(garajeId: String, plazaId: String, estado: EstadoPlaza): Resource<Plaza> =
+        safeApiCall { api.cambiarEstadoPlaza(garajeId, plazaId, estado.name) }.map { it.aModelo() }
+
+    /**
+     * Atajo de "Mis garajes": ocupa (−1 cupo) o libera (+1 cupo) una plaza. Desde el Sprint 3 los
+     * cupos se derivan del estado de las plazas, así que se cambia la primera plaza que aplique.
+     */
+    suspend fun ajustarCupo(garajeId: String, liberar: Boolean): Resource<Unit> {
+        val desde = if (liberar) EstadoPlaza.OCCUPIED else EstadoPlaza.AVAILABLE
+        val hacia = if (liberar) EstadoPlaza.AVAILABLE else EstadoPlaza.OCCUPIED
+        return when (val r = plazas(garajeId)) {
+            is Resource.Success -> {
+                val plaza = r.data.firstOrNull { it.estado == desde }
+                    ?: return Resource.Error(
+                        if (liberar) "No hay plazas ocupadas para liberar" else "No hay plazas libres para ocupar"
+                    )
+                cambiarEstadoPlaza(garajeId, plaza.id, hacia).map { }
+            }
+            is Resource.Error -> r
             Resource.Loading -> Resource.Loading
         }
     }
-
-    private suspend fun mapOne(
-        call: suspend () -> Response<GarajeResponse>
-    ): Resource<Garaje> {
-        return when (val result = safeApiCall(call)) {
-            is Resource.Success -> Resource.Success(result.data.toModel())
-            is Resource.Error -> Resource.Error(result.message)
-            Resource.Loading -> Resource.Loading
-        }
-    }
-
-    private fun Garaje.toRequest() = GarajeRequest(
-        nombre = nombre.trim(),
-        direccion = direccion.trim(),
-        descripcion = descripcion.trim().ifBlank { null },
-        precioPorHora = precioPorHora,
-        espaciosTotales = espaciosTotales,
-        fotos = fotos,
-        lat = requireNotNull(lat) { "El garaje no tiene ubicación" },
-        lng = requireNotNull(lng) { "El garaje no tiene ubicación" }
-    )
-
-    private fun GarajeResponse.toModel() = Garaje(
-        id = id,
-        propietarioId = propietarioId,
-        nombre = nombre,
-        direccion = direccion,
-        descripcion = descripcion ?: "",
-        precioPorHora = precioPorHora,
-        espaciosTotales = espaciosTotales,
-        espaciosDisponibles = espaciosDisponibles,
-        fotos = fotos ?: emptyList(),
-        lat = lat,
-        lng = lng,
-        activo = activo,
-        distanciaKm = distanciaKm
-    )
 }

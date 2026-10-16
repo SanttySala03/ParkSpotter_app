@@ -9,40 +9,64 @@ import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
+import retrofit2.http.QueryMap
 
+/**
+ * Endpoints de garajes del backend (rama develop). Base: /api/v1/garages.
+ * Guía completa: ParkSpotter-BackEnd/docs/API-Sprint-03-Busqueda-Garajes.md
+ */
 interface GarajeApi {
 
-    // Búsqueda de garajes activos — fuente real del mapa (Sprint 3).
-    // Todos los parámetros son opcionales: sin ellos trae todos los activos.
-    @GET("garajes")
-    suspend fun buscar(
-        @Query("lat") lat: Double? = null,
-        @Query("lng") lng: Double? = null,
-        @Query("radioKm") radioKm: Double? = null,
-        @Query("precioMax") precioMax: Int? = null,
-        @Query("soloDisponibles") soloDisponibles: Boolean? = null,
-        @Query("q") texto: String? = null
-    ): Response<List<GarajeResponse>>
+    // ── Sprint 3: búsqueda, mapa, detalle y disponibilidad (públicos) ──
 
-    @GET("garajes/{id}")
-    suspend fun obtener(@Path("id") id: String): Response<GarajeResponse>
+    /** Búsqueda paginada con filtros. Los filtros van en [filtros] (ver FiltrosBusqueda.toQueryMap). */
+    @GET("garages/search")
+    suspend fun buscar(@QueryMap filtros: Map<String, String>): Response<PageResponse<GarageSummaryResponse>>
 
-    // Garajes del propietario autenticado — fuente de MisGarajesScreen (Sprint 2).
-    @GET("garajes/mios")
-    suspend fun listarMios(): Response<List<GarajeResponse>>
+    /** Marcadores del área visible: minLat/minLng/maxLat/maxLng + los mismos filtros de /search. */
+    @GET("garages/map")
+    suspend fun marcadores(@QueryMap parametros: Map<String, String>): Response<GarageMapResponse>
 
-    @POST("garajes")
-    suspend fun crear(@Body request: GarajeRequest): Response<GarajeResponse>
-
-    @PUT("garajes/{id}")
-    suspend fun actualizar(@Path("id") id: String, @Body request: GarajeRequest): Response<GarajeResponse>
-
-    @PATCH("garajes/{id}/disponibilidad")
-    suspend fun actualizarDisponibilidad(
+    @GET("garages/{id}/detail")
+    suspend fun detalle(
         @Path("id") id: String,
-        @Body request: DisponibilidadRequest
-    ): Response<GarajeResponse>
+        @Query("includeSpots") incluirPlazas: Boolean = true
+    ): Response<GarageDetailResponse>
 
-    @DELETE("garajes/{id}")
+    @GET("garages/{id}/availability")
+    suspend fun disponibilidad(@Path("id") id: String): Response<GarageAvailabilityResponse>
+
+    // ── Sprint 2: gestión del propietario (requieren token) ──
+
+    @GET("garages/{id}")
+    suspend fun obtener(@Path("id") id: String): Response<GarageResponse>
+
+    @GET("garages/mine")
+    suspend fun listarMios(): Response<List<GarageResponse>>
+
+    @POST("garages")
+    suspend fun crear(@Body request: GarageRequest): Response<GarageResponse>
+
+    @PUT("garages/{id}")
+    suspend fun actualizar(@Path("id") id: String, @Body request: GarageUpdateRequest): Response<GarageResponse>
+
+    /** status = ACTIVE | INACTIVE (SUSPENDED es solo de administradores). */
+    @PATCH("garages/{id}/status")
+    suspend fun cambiarEstado(@Path("id") id: String, @Query("status") estado: String): Response<GarageResponse>
+
+    @DELETE("garages/{id}")
     suspend fun eliminar(@Path("id") id: String): Response<Unit>
+
+    // ── Sprint 3: plazas del garaje ──
+
+    @GET("garages/{garageId}/spots")
+    suspend fun plazas(@Path("garageId") garajeId: String): Response<List<ParkingSpotResponse>>
+
+    /** status = AVAILABLE | OCCUPIED | RESERVED | OUT_OF_SERVICE. Solo dueño/admin. */
+    @PATCH("garages/{garageId}/spots/{spotId}/status")
+    suspend fun cambiarEstadoPlaza(
+        @Path("garageId") garajeId: String,
+        @Path("spotId") plazaId: String,
+        @Query("status") estado: String
+    ): Response<ParkingSpotResponse>
 }

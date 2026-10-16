@@ -1,29 +1,20 @@
 package com.example.parkspotter.viewmodel
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.parkspotter.data.remote.ApiClient
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.parkspotter.data.AppContainer
 import com.example.parkspotter.data.repository.GarajeRepository
+import com.example.parkspotter.model.EstadoGaraje
 import com.example.parkspotter.model.Garaje
 import com.example.parkspotter.util.Resource
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-/** Intervalo de refresco del mapa en tiempo real (Sprint 3). */
-private const val INTERVALO_ACTUALIZACION_MS = 15_000L
-
-data class FiltrosBusqueda(
-    val texto: String = "",
-    val radioKm: Double? = 5.0,
-    val precioMax: Int? = null,
-    val soloDisponibles: Boolean = false
-)
-
+/** Sprint 2 — Gestión de garajes del propietario (Mis garajes, publicar, editar). */
 class GarajeViewModel(private val repository: GarajeRepository) : ViewModel() {
 
     private val _garajes = MutableStateFlow<List<Garaje>>(emptyList())
@@ -35,69 +26,19 @@ class GarajeViewModel(private val repository: GarajeRepository) : ViewModel() {
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 
-    private val _filtros = MutableStateFlow(FiltrosBusqueda())
-    val filtros: StateFlow<FiltrosBusqueda> = _filtros
+    /** Ids con una acción en curso (cupos, publicar): evita dobles toques. */
+    private val _ocupados = MutableStateFlow<Set<String>>(emptySet())
+    val ocupados: StateFlow<Set<String>> = _ocupados
 
-    private var ubicacionActual: Pair<Double, Double>? = null
-    private var pollingJob: Job? = null
-
-    /** Búsqueda puntual de garajes activos cerca de [lat]/[lng] con los filtros vigentes. */
-    fun buscarGarajes(lat: Double? = null, lng: Double? = null, mostrarCargando: Boolean = true) {
-        if (lat != null && lng != null) ubicacionActual = lat to lng
-        val (ubicLat, ubicLng) = ubicacionActual ?: (lat to lng)
-        val f = _filtros.value
-        viewModelScope.launch {
-            if (mostrarCargando) _loading.value = true
-            _error.value = null
-            val result = repository.buscar(
-                lat = ubicLat,
-                lng = ubicLng,
-                radioKm = if (ubicLat != null) f.radioKm else null,
-                precioMax = f.precioMax,
-                soloDisponibles = f.soloDisponibles.takeIf { it },
-                texto = f.texto
-            )
-            when (result) {
-                is Resource.Success -> _garajes.value = result.data
-                is Resource.Error -> _error.value = result.message
-                Resource.Loading -> Unit
-            }
-            if (mostrarCargando) _loading.value = false
-        }
-    }
-
-    fun actualizarFiltros(nuevos: FiltrosBusqueda) {
-        _filtros.value = nuevos
-        buscarGarajes(mostrarCargando = false)
-    }
-
-    /** Sprint 3 — mapa "en tiempo real": refresca la búsqueda cada 15s mientras la pantalla esté visible. */
-    fun iniciarActualizacionEnVivo() {
-        if (pollingJob?.isActive == true) return
-        pollingJob = viewModelScope.launch {
-            while (true) {
-                delay(INTERVALO_ACTUALIZACION_MS)
-                buscarGarajes(mostrarCargando = false)
-            }
-        }
-    }
-
-    fun detenerActualizacionEnVivo() {
-        pollingJob?.cancel()
-        pollingJob = null
-    }
-
-    override fun onCleared() {
-        detenerActualizacionEnVivo()
-        super.onCleared()
-    }
+    private val _garajeEditando = MutableStateFlow<Garaje?>(null)
+    val garajeEditando: StateFlow<Garaje?> = _garajeEditando
 
     fun cargarMisGarajes() {
         viewModelScope.launch {
             _loading.value = true
             _error.value = null
             when (val result = repository.listarMios()) {
-                is Resource.Success -> _garajes.value = result.data
+                is Resource.Success -> _garajes.value = result.data.sortedBy { it.nombre.lowercase() }
                 is Resource.Error -> _error.value = result.message
                 Resource.Loading -> Unit
             }
@@ -105,10 +46,7 @@ class GarajeViewModel(private val repository: GarajeRepository) : ViewModel() {
         }
     }
 
-    private val _garajeEditando = MutableStateFlow<Garaje?>(null)
-    val garajeEditando: StateFlow<Garaje?> = _garajeEditando
-
-    /** Carga un garaje para editarlo en RegistrarGarajeScreen (Sprint 2). */
+    /** Carga un garaje para editarlo en RegistrarGarajeScreen. */
     fun cargarGaraje(id: String) {
         viewModelScope.launch {
             _loading.value = true
@@ -144,27 +82,33 @@ class GarajeViewModel(private val repository: GarajeRepository) : ViewModel() {
     /** Publica u oculta el garaje (optimista: revierte si el backend falla). */
     fun cambiarDisponibilidad(id: String, activo: Boolean) {
         val anterior = _garajes.value
-        _garajes.value = anterior.map { if (it.id == id) it.copy(activo = activo) else it }
-        viewModelScope.launch {
-            val result = repository.actualizarActivo(id, activo)
-            if (result is Resource.Error) {
-                _garajes.value = anterior
-                _error.value = result.message
+        _garajes.value = anterior.map {
+            if (it.id == id) it.copy(estado = if (activo) EstadoGaraje.ACTIVE
+                                             else EstadoGaraje.INACTIVE)
+            else it
+        }
+        conBloqueo(id) {
+            when (val result = repository.cambiarActivo(id, activo)) {
+                is Resource.Success -> reemplazar(result.data)
+                is Resource.Error -> {
+                    _garajes.value = anterior
+                    _error.value = result.message
+                }
+                Resource.Loading -> Unit
             }
         }
     }
 
-    /** Sprint 2/3 — el propietario ajusta los cupos libres; los conductores lo ven en el mapa en vivo. */
-    fun cambiarEspaciosDisponibles(id: String, espacios: Int) {
-        val anterior = _garajes.value
-        val garaje = anterior.firstOrNull { it.id == id } ?: return
-        if (espacios < 0 || espacios > garaje.espaciosTotales) return
-        _garajes.value = anterior.map { if (it.id == id) it.copy(espaciosDisponibles = espacios) else it }
-        viewModelScope.launch {
-            val result = repository.actualizarEspacios(id, espacios)
-            if (result is Resource.Error) {
-                _garajes.value = anterior
-                _error.value = result.message
+    /**
+     * Ocupa (−1) o libera (+1) una plaza. Los conductores lo ven al instante en el mapa
+     * porque el backend publica el cambio por el stream en tiempo real.
+     */
+    fun ajustarCupo(id: String, liberar: Boolean) {
+        conBloqueo(id) {
+            when (val r = repository.ajustarCupo(id, liberar)) {
+                is Resource.Success -> repository.obtener(id).let { if (it is Resource.Success) reemplazar(it.data) }
+                is Resource.Error -> _error.value = r.message
+                Resource.Loading -> Unit
             }
         }
     }
@@ -181,17 +125,24 @@ class GarajeViewModel(private val repository: GarajeRepository) : ViewModel() {
         }
     }
 
+    private fun reemplazar(garaje: Garaje) {
+        _garajes.value = _garajes.value.map { if (it.id == garaje.id) garaje.copy(fotos = it.fotos) else it }
+    }
+
+    private fun conBloqueo(id: String, accion: suspend () -> Unit) {
+        if (id in _ocupados.value) return
+        _ocupados.value = _ocupados.value + id
+        viewModelScope.launch {
+            try { accion() } finally { _ocupados.value = _ocupados.value - id }
+        }
+    }
+
     fun limpiarError() { _error.value = null }
     fun mostrarError(msg: String) { _error.value = msg }
 
     companion object {
-        fun factory(context: Context): ViewModelProvider.Factory =
-            object : ViewModelProvider.Factory {
-                @Suppress("UNCHECKED_CAST")
-                override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    val api = ApiClient.createGarajeApi(context.applicationContext)
-                    return GarajeViewModel(GarajeRepository(api)) as T
-                }
-            }
+        val Factory: ViewModelProvider.Factory = viewModelFactory {
+            initializer { GarajeViewModel(AppContainer.garajeRepository) }
+        }
     }
 }

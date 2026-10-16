@@ -16,7 +16,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -24,7 +23,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.parkspotter.model.RolUsuario
+import com.example.parkspotter.ui.components.LogoParkSpotter
 import com.example.parkspotter.ui.theme.*
+import com.example.parkspotter.util.errorPassword
+import com.example.parkspotter.util.esEmailValido
+import com.example.parkspotter.util.esTelefonoValido
 import com.example.parkspotter.viewmodel.AuthViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -33,8 +36,7 @@ fun RegisterScreen(
     onRegisterSuccess: (RolUsuario) -> Unit,
     onNavigateToLogin: () -> Unit
 ) {
-    val context = LocalContext.current
-    val viewModel: AuthViewModel = viewModel(factory = AuthViewModel.factory(context))
+    val viewModel: AuthViewModel = viewModel(factory = AuthViewModel.Factory)
     val isLoading by viewModel.loading.collectAsState()
     val backendError by viewModel.error.collectAsState()
 
@@ -52,6 +54,8 @@ fun RegisterScreen(
     var localError by remember { mutableStateOf<String?>(null) }
     val errorMessage = localError ?: backendError
 
+    IconosBarraEstado(fondoOscuro = false)
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -60,11 +64,15 @@ fun RegisterScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .systemBarsPadding()
+                .imePadding()
                 .padding(horizontal = 28.dp)
                 .verticalScroll(rememberScrollState()),
         ) {
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
+            LogoParkSpotter(modifier = Modifier.size(56.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = "Crea tu cuenta",
                 color = TextDark,
@@ -82,7 +90,7 @@ fun RegisterScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(96.dp),
+                    .height(IntrinsicSize.Min),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 RolCard(
@@ -106,7 +114,13 @@ fun RegisterScreen(
                 ) { rolSeleccionado = RolUsuario.PROPIETARIO }
             }
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Text(
+                text = "Puedes cambiar de modo cuando quieras desde tu perfil.",
+                color = TextMedium,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+            Spacer(modifier = Modifier.height(20.dp))
 
             OutlinedTextField(
                 value = nombre,
@@ -161,6 +175,7 @@ fun RegisterScreen(
                 value = password,
                 onValueChange = { password = it; localError = null; viewModel.limpiarError() },
                 label = { Text("Contraseña") },
+                supportingText = { Text("Mínimo 12 caracteres, con al menos una letra y un número") },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -198,11 +213,13 @@ fun RegisterScreen(
                     localError = when {
                         nombre.isBlank() || email.isBlank() || password.isBlank() ->
                             "Completa todos los campos obligatorios"
-                        !email.contains("@") -> "Ingresa un correo válido"
-                        password.length < 8 -> "La contraseña debe tener mínimo 8 caracteres"
+                        !esEmailValido(email) -> "Ingresa un correo válido, ej. nombre@dominio.com"
+                        errorPassword(password) != null -> errorPassword(password)
                         password != confirmPassword -> "Las contraseñas no coinciden"
                         rolSeleccionado == RolUsuario.PROPIETARIO && telefono.isBlank() ->
                             "Ingresa un teléfono de contacto"
+                        telefono.isNotBlank() && !esTelefonoValido(telefono) ->
+                            "Teléfono inválido (7 a 20 dígitos, puede iniciar con +)"
                         else -> {
                             viewModel.register(
                                 email = email,

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Símbolo ParkSpotter: P + vehículo + plaza de parqueo (grilla 120x120, ver ui/components/Marca.kt) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="120dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
+    <path android:fillColor="#FF0B2D5B" android:pathData="M30,8 H64 A16,16 0 0 1 80,24 V62 A16,16 0 0 1 64,78 H30 A16,16 0 0 1 14,62 V24 A16,16 0 0 1 30,8 Z"/>
+    <path android:fillColor="#FF0B2D5B" android:pathData="M26,40 H26 A12,12 0 0 1 38,52 V100 A12,12 0 0 1 26,112 H26 A12,12 0 0 1 14,100 V52 A12,12 0 0 1 26,40 Z"/>
+    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="4.5" android:fillColor="#00000000" android:pathData="M40,18 H60 A10,10 0 0 1 70,28 V58 A10,10 0 0 1 60,68 H40 A10,10 0 0 1 30,58 V28 A10,10 0 0 1 40,18 Z"/>
+    <path android:fillColor="#FFFFFFFF" android:pathData="M47,24 H53 A8,8 0 0 1 61,32 V54 A8,8 0 0 1 53,62 H47 A8,8 0 0 1 39,54 V32 A8,8 0 0 1 47,24 Z"/>
+    <path android:fillColor="#FF0B2D5B" android:pathData="M45,31 H55 A3,3 0 0 1 58,34 V36 A3,3 0 0 1 55,39 H45 A3,3 0 0 1 42,36 V34 A3,3 0 0 1 45,31 Z"/>
+    <path android:fillColor="#FF0B2D5B" android:pathData="M44.5,50 H55.5 A2.5,2.5 0 0 1 58,52.5 V53.5 A2.5,2.5 0 0 1 55.5,56 H44.5 A2.5,2.5 0 0 1 42,53.5 V52.5 A2.5,2.5 0 0 1 44.5,50 Z"/>
+    <path android:fillColor="#FFFFFFFF" android:pathData="M37.0,34 H38.0 A1.5,1.5 0 0 1 39.5,35.5 V35.5 A1.5,1.5 0 0 1 38.0,37 H37.0 A1.5,1.5 0 0 1 35.5,35.5 V35.5 A1.5,1.5 0 0 1 37.0,34 Z"/>
+    <path android:fillColor="#FFFFFFFF" android:pathData="M62.0,34 H63.0 A1.5,1.5 0 0 1 64.5,35.5 V35.5 A1.5,1.5 0 0 1 63.0,37 H62.0 A1.5,1.5 0 0 1 60.5,35.5 V35.5 A1.5,1.5 0 0 1 62.0,34 Z"/>
+    <path android:fillColor="#FF00C896" android:pathData="M86,15 A28,28 0 0 1 86,71 Z"/>
+</vector>

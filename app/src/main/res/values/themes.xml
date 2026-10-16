@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
-    <style name="Theme.ParkSpotter" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- Fondo azul de marca mientras arranca la app (continúa en SplashScreen sin destello blanco) -->
+    <style name="Theme.ParkSpotter" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/ps_azul</item>
+    </style>
 </resources>
