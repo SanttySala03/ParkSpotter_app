@@ -1,338 +1,93 @@
-# \# ParkSpotter
-
-# 
-
-# \*\*Aplicación Android para la gestión de parqueaderos en desuso\*\*
-
-# 
-
-# ParkSpotter es una aplicación móvil desarrollada en \*\*Kotlin con Jetpack Compose\*\*, orientada a la gestión de parqueaderos en desuso en \*\*Bogotá, Colombia\*\*.
-
-# 
-
-# El proyecto surge como parte de la \*\*Práctica IV del programa de Ingeniería de Sistemas de la Universidad Central\*\*, con el propósito de desarrollar una solución tecnológica que permita gestionar espacios de parqueadero y facilitar su administración desde una aplicación móvil.
-
-# 
-
-# \---
-
-# 
-
-# \## Tecnologías
-
-# 
-
-# \* \*\*Kotlin\*\*
-
-# \* \*\*Jetpack Compose\*\*
-
-# \* \*\*Android SDK\*\*
-
-# \* \*\*Navigation Compose\*\*
-
-# \* \*\*Android Studio\*\*
-
-# \* \*\*Git / GitHub\*\*
-
-# 
-
-# \---
-
-# 
-
-# \## Objetivo
-
-# 
-
-# Desarrollar una aplicación Android que permita gestionar información relacionada con parqueaderos en desuso, proporcionando una interfaz sencilla para la autenticación de usuarios y la administración de los espacios registrados.
-
-# 
-
-# \---
-
-# 
-
-# \## Funcionalidades implementadas
-
-# 
-
-# Actualmente el proyecto cuenta con las siguientes funcionalidades:
-
-# 
-
-# \### Autenticación y usuarios
-
-# 
-
-# \* Pantalla de inicio (\*Splash Screen\*).
-
-# \* Registro de usuarios.
-
-# \* Inicio de sesión.
-
-# \* Manejo de usuarios y roles.
-
-# \* Navegación entre las diferentes pantallas de la aplicación.
-
-# 
-
-# \### Gestión de garajes
-
-# 
-
-# \* Modelo de datos para los garajes.
-
-# \* Registro de nuevos garajes.
-
-# \* Visualización de los garajes registrados.
-
-# \* Pantalla de administración de los garajes del usuario.
-
-# 
-
-# \---
-
-# 
-
-# \## Sprints
-
-# 
-
-# El desarrollo del proyecto se encuentra organizado mediante sprints, permitiendo mantener una evolución progresiva y trazable de la aplicación.
-
-# 
-
-# \### Sprint 1 — Autenticación y roles
-
-# 
-
-# En el primer sprint se desarrolló la estructura inicial relacionada con los usuarios y el acceso a la aplicación.
-
-# 
-
-# \*\*Principales entregables:\*\*
-
-# 
-
-# \* Modelo `Usuario`.
-
-# \* Implementación del `SplashScreen`.
-
-# \* Implementación de `LoginScreen`.
-
-# \* Implementación de `RegisterScreen`.
-
-# \* Configuración del sistema de navegación.
-
-# \* Integración de `NavGraph`.
-
-# \* Configuración de Navigation Compose.
-
-# \* Inicio de la aplicación mediante el sistema de navegación.
-
-# \* Manejo inicial de autenticación y roles.
-
-# 
-
-# \*\*Commit de integración:\*\*
-
-# 
-
-# ```text
-
-# merge: Sprint 1 - Autenticacion y roles
-
-# ```
-
-# 
-
-# \---
-
-# 
-
-# \### Sprint 2 — Gestión de garajes
-
-# 
-
-# En el segundo sprint se incorporó la funcionalidad relacionada con la gestión de los espacios de parqueadero.
-
-# 
-
-# \*\*Principales entregables:\*\*
-
-# 
-
-# \* Creación del modelo `Garaje`.
-
-# \* Implementación de `RegistrarGarajeScreen`.
-
-# \* Implementación de `MisGarajesScreen`.
-
-# \* Integración de la gestión de garajes dentro de la aplicación.
-
-# 
-
-# \*\*Commit de integración:\*\*
-
-# 
-
-# ```text
-
-# merge: Sprint 2 - Gestion de garajes
-
-# ```
-
-# 
-
-# \---
-
-# 
-
-# \## Estado del proyecto
-
-# 
-
-# El proyecto se encuentra en desarrollo y continúa evolucionando mediante nuevos sprints y funcionalidades.
-
-# 
-
-# La estructura actual permite continuar incorporando nuevas características sobre la base construida durante los primeros dos sprints.
-
-# 
-
-# \---
-
-# 
-
-# \## Equipo de desarrollo
-
-# 
-
-# \*\*Práctica IV — Ingeniería de Sistemas\*\*
-
-# 
-
-# | Integrante                        |
-
-# | --------------------------------- |
-
-# | Daniel Alejandro Andrade          |
-
-# | David Santiago Carrillo Salamanca |
-
-# | Erika Mailyn Quitiano Andrade     |
-
-# 
-
-# \### Docente
-
-# 
-
-# \*\*Angie Lorena Aldana Padilla\*\*
-
-# 
-
-# \### Institución
-
-# 
-
-# \*\*Universidad Central\*\*
-
-# 
-
-# \*\*Bogotá, Colombia\*\*
-
-# 
-
-# \---
-
-# 
-
-# \## Estructura general
-
-# 
-
-# La aplicación está organizada como un proyecto Android utilizando Kotlin y Jetpack Compose.
-
-# 
-
-# ```text
-
-# ParkSpotter/
-
-# ├── app/
-
-# ├── gradle/
-
-# ├── build.gradle.kts
-
-# ├── settings.gradle.kts
-
-# └── README.md
-
-# ```
-
-# 
-
-# La estructura interna del proyecto se encuentra en evolución conforme se incorporan nuevos módulos y funcionalidades durante los diferentes sprints.
-
-# 
-
-# \---
-
-# 
-
-# \## Evolución del proyecto
-
-# 
-
-# El historial de desarrollo se mantiene mediante Git, permitiendo consultar la evolución del proyecto y los cambios realizados durante cada sprint.
-
-# 
-
-# ```text
-
-# Configuración inicial
-
-# &#x20;       ↓
-
-# Sprint 1
-
-# Autenticación y roles
-
-# &#x20;       ↓
-
-# Sprint 2
-
-# Gestión de garajes
-
-# &#x20;       ↓
-
-# Nuevos sprints
-
-# ```
-
-# 
-
-# \---
-
-# 
-
-# \## Información académica
-
-# 
-
-# \*\*Proyecto:\*\* ParkSpotter
-
-# \*\*Asignatura:\*\* Práctica IV
-
-# \*\*Programa:\*\* Ingeniería de Sistemas
-
-# \*\*Institución:\*\* Universidad Central
-
-# \*\*Ubicación:\*\* Bogotá, Colombia
-
-# \*\*Estado:\*\* En desarrollo
-
-
-
+# ParkSpotter — App Android
+
+**Encuentra tu espacio.** Aplicación Android (Kotlin + Jetpack Compose) para encontrar, reservar y
+publicar parqueaderos —incluidos garajes en desuso— en **Bogotá, Colombia**.
+
+Proyecto de la **Práctica IV de Ingeniería de Sistemas — Universidad Central**.
+Backend: [ParkSpotter-BackEnd](https://github.com/Circunvalar/ParkSpotter-BackEnd) (Spring Boot, rama `develop`).
+
+---
+
+## Funcionalidades por sprint
+
+| Sprint | Objetivo | Estado en la app |
+|---|---|---|
+| 1 — Autenticación y roles | Registro, login, sesión persistente, perfil | ✅ JWT + refresh automático, tokens cifrados, cambio de contraseña, modo conductor/propietario |
+| 2 — Gestión de garajes | Publicar y administrar garajes | ✅ Crear/editar/eliminar, publicar/ocultar, ocupar/liberar plazas |
+| 3 — Búsqueda y mapa en tiempo real | Encontrar parqueadero cerca | ✅ Mapa con carga por área visible, lista, filtros, detalle con plazas por piso, disponibilidad en vivo (SSE) |
+| 4 — Reservas | Reservar, confirmar, cancelar, historial | ✅ Flujo en 3 pasos, validaciones, historial y cancelación. *Modo demostración* hasta que el backend publique `/reservations` ([contrato propuesto](docs/API-Sprint-04-Reservas-propuesta.md)) |
+| 5 — Pagos y notificaciones | — | Pendiente |
+| 6 — Calidad y calificaciones | — | Pendiente |
+
+## Tecnologías
+
+Kotlin · Jetpack Compose (Material 3) · Navigation Compose · ViewModel + StateFlow · Retrofit/OkHttp
+· OkHttp SSE · MapLibre (OpenFreeMap) · Play Services Location · EncryptedSharedPreferences
+· JUnit + Robolectric.
+
+## Cómo correrla
+
+1. **Backend** (`develop`): ver su README. Para desarrollo sin tocar la base compartida se puede
+   levantar con H2 en memoria:
+   ```bash
+   ./mvnw spring-boot:run -Dspring-boot.run.useTestClasspath=true "-Dspring-boot.run.arguments=--spring.datasource.url=jdbc:h2:mem:parkspotter_dev;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE --spring.datasource.driver-class-name=org.h2.Driver --spring.datasource.username=sa --spring.datasource.password= --spring.jpa.database-platform=org.hibernate.dialect.H2Dialect --spring.jpa.hibernate.ddl-auto=create-drop"
+   ```
+2. **App**: abrir en Android Studio y ejecutar.
+   - En el **emulador** la app usa `http://10.0.2.2:8080/api/v1/` (el localhost del PC).
+   - En un **celular físico** agregar en `local.properties` (no se sube a Git):
+     ```properties
+     parkspotter.apiUrl=http://192.168.1.15:8080/api/v1/
+     ```
+     y esa IP en `app/src/main/res/xml/network_security_config.xml`.
+
+## Pruebas
+
+```bash
+./gradlew :app:testDebugUnitTest
+```
+
+- `ReglasReservaTest`, `MapeosTest`: reglas de negocio y traducción del JSON del backend.
+- `ContratoBackendTest`: recorre el flujo completo contra un backend real (registro → garaje →
+  búsqueda → mapa → detalle → evento SSE → edición). Se activa con
+  `PARKSPOTTER_API=http://localhost:8080/api/v1/`.
+- `CapturasPantallasTest`: renderiza las pantallas reales con Robolectric y guarda PNG (sin
+  emulador). Se activa con `PARKSPOTTER_API` y `PARKSPOTTER_SHOTS=<carpeta>`.
+
+## Estructura
+
+```text
+app/src/main/java/com/example/parkspotter/
+├── MainActivity.kt
+├── data/
+│   ├── AppContainer.kt        # dependencias compartidas
+│   ├── remote/                # Retrofit (Auth, Garaje, Reserva), DTOs, mapeos, SSE
+│   ├── local/                 # perfil y reservas guardadas en el dispositivo
+│   ├── repository/            # Auth, Garaje, Reserva (remoto/local)
+│   └── session/               # tokens cifrados
+├── model/                     # Garaje, Plaza, Reserva, FiltrosBusqueda…
+├── viewmodel/                 # Auth, Busqueda, DetalleGaraje, Garaje, Reservar, MisReservas
+├── screens/                   # Splash, Login, Registro, Mapa, Detalle, Reservar, MisReservas, MisGarajes, RegistrarGaraje, Perfil
+├── navigation/NavGraph.kt
+├── ui/components/             # Logo y marca, píldoras de estado, barra inferior…
+├── ui/theme/                  # Paleta e identidad visual
+└── util/                      # Reglas de reserva, validaciones, formatos, ubicación
+```
+
+## Identidad visual
+
+- Azul `#0B2D5B` (confianza, seguridad, tecnología) como color principal.
+- Verde `#00C896` (disponibilidad, movilidad) como acento; `#00875F` para texto y botones con
+  texto blanco (contraste WCAG AA).
+- Gris claro `#F4F7FA` para fondos.
+- Símbolo: **P + vehículo + plaza de parqueo** (`ui/components/Marca.kt` y el ícono adaptativo).
+- Tipografía sans serif geométrica (Montserrat en el manual; ver nota en `ui/theme/Type.kt`).
+
+## Equipo
+
+| Integrante | Rol |
+|---|---|
+| Daniel Alejandro Andrade | Backend (API) |
+| David Santiago Carrillo Salamanca | App Android |
+| Erika Mailyn Quitiano Andrade | Plataforma web y diseño |
+
+**Docente:** Angie Lorena Aldana Padilla · Universidad Central · Bogotá, Colombia
