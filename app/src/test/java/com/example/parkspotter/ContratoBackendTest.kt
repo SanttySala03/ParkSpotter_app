@@ -7,10 +7,13 @@ import com.example.parkspotter.data.remote.GarajeApi
 import com.example.parkspotter.data.remote.LoginRequest
 import com.example.parkspotter.data.remote.RegisterRequest
 import com.example.parkspotter.data.remote.ReservaApi
+import com.example.parkspotter.data.remote.ReservationRequest
+import com.example.parkspotter.data.remote.aIso
 import com.example.parkspotter.data.remote.aModelo
 import com.example.parkspotter.data.remote.aRequest
 import com.example.parkspotter.model.AreaMapa
 import com.example.parkspotter.model.EstadoPlaza
+import com.example.parkspotter.model.EstadoReserva
 import com.example.parkspotter.model.FiltrosBusqueda
 import com.example.parkspotter.model.Garaje
 import kotlinx.coroutines.flow.take
@@ -28,6 +31,8 @@ import org.junit.Test
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.time.LocalTime
+import java.time.ZoneId
+import java.time.ZonedDateTime
 import java.util.concurrent.TimeUnit
 
 /**
@@ -121,10 +126,17 @@ class ContratoBackendTest {
         val editado = garajes.actualizar(garaje.id, GarageUpdateRequest(pricePerHour = 4500.0))
         assertEquals(4500, editado.body()!!.aModelo().precioPorHora)
 
-        // ── Sprint 4: el backend aún no tiene /reservations → la app debe usar modo local ──
-        val mias = reservas.mias()
-        assertTrue("reservations/mine responde ${mias.code()}", mias.isSuccessful || mias.code() == 404 || mias.code() == 405)
-        if (mias.isSuccessful) assertNotNull(mias.body()!!.content)
+        // ── Sprint 4: reservar, ver en el historial y cancelar (backend rama Sprint-04-Reservas) ──
+        val inicio = ZonedDateTime.now(ZoneId.of("America/Bogota")).plusDays(1).withHour(10).withMinute(0).withSecond(0).withNano(0)
+        val creada = reservas.crear(ReservationRequest(garaje.id, "CAR", "KDZ482", inicio.aIso(), inicio.plusHours(2).aIso()))
+        assertEquals("crear reserva: ${creada.errorBody()?.string()}", 201, creada.code())
+        val reserva = creada.body()!!.aModelo()!!
+        assertEquals(EstadoReserva.CONFIRMED, reserva.estado)
+        assertEquals(9000, reserva.total) // 4500 × 2 h
+        assertEquals(inicio.toInstant(), reserva.inicio.toInstant())
+        assertNotNull(reserva.plazaCodigo)
+        assertTrue(reservas.mias().body()!!.content!!.any { it.id == reserva.id })
+        assertEquals("CANCELLED", reservas.cancelar(reserva.id).body()!!.status)
 
         // Limpieza
         assertEquals(204, garajes.eliminar(garaje.id).code())

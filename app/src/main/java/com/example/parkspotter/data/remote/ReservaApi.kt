@@ -9,9 +9,8 @@ import retrofit2.http.Path
 import retrofit2.http.Query
 
 /**
- * Sprint 4 — Reservas. Contrato PROPUESTO al backend (aún no existe en la rama develop):
- * ver docs/API-Sprint-04-Reservas-propuesta.md. Mientras el backend no lo publique,
- * ReservaRepository detecta el 404 y trabaja en modo local (ReservaLocalDataSource).
+ * Sprint 4 — Reservas (backend rama Sprint-04-Reservas): ver docs/API-Sprint-04-Reservas.md.
+ * Contra un backend sin el módulo (404), ReservaRepository trabaja en modo local (ReservaLocalDataSource).
  */
 interface ReservaApi {
 

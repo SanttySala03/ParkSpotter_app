@@ -1,12 +1,9 @@
-# Sprint 04 — Reservas: contrato propuesto para el backend
+# Sprint 04 — Reservas: contrato con el backend
 
-> Propuesta del front Android (David) para el módulo de reservas de **ParkSpotter-BackEnd**.
-> La app ya consume este contrato: mientras `GET /api/v1/reservations/mine` responda **404**,
-> trabaja en *modo demostración* (guarda las reservas en el celular). En cuanto el backend lo
-> publique, la app cambia sola a modo remoto sin tocar código.
->
-> Sigue las convenciones del backend actual: rutas `/api/v1/...`, JSON en inglés, `ApiError`
-> para errores, `PageResponse` para listados y zona horaria `America/Bogota`.
+> Implementado en **ParkSpotter-BackEnd**, rama `Sprint-04-Reservas` (guía oficial:
+> `docs/API-Sprint-04-Reservas.md` del backend). Si la app habla con un backend que aún no tiene el
+> módulo (`GET /api/v1/reservations/mine` responde **404**), trabaja en *modo demostración* y guarda
+> las reservas en el celular.
 
 ## Modelo
 

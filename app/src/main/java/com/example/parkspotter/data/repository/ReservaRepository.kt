@@ -25,7 +25,7 @@ enum class ModoReservas {
 
 /**
  * Sprint 4 — Reservas. Usa el backend si publica /api/v1/reservations (contrato en
- * docs/API-Sprint-04-Reservas-propuesta.md) y, si responde 404, cae a ReservaLocalDataSource
+ * docs/API-Sprint-04-Reservas.md) y, si responde 404, cae a ReservaLocalDataSource
  * para que el flujo completo (reservar, confirmar, cancelar, historial) funcione en la demo.
  */
 class ReservaRepository(

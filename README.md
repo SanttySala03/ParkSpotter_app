@@ -15,7 +15,7 @@ Backend: [ParkSpotter-BackEnd](https://github.com/Circunvalar/ParkSpotter-BackEn
 | 1 — Autenticación y roles | Registro, login, sesión persistente, perfil | ✅ JWT + refresh automático, tokens cifrados, cambio de contraseña, modo conductor/propietario |
 | 2 — Gestión de garajes | Publicar y administrar garajes | ✅ Crear/editar/eliminar, publicar/ocultar, ocupar/liberar plazas |
 | 3 — Búsqueda y mapa en tiempo real | Encontrar parqueadero cerca | ✅ Mapa con carga por área visible, lista, filtros, detalle con plazas por piso, disponibilidad en vivo (SSE) |
-| 4 — Reservas | Reservar, confirmar, cancelar, historial | ✅ Flujo en 3 pasos, validaciones, historial y cancelación. *Modo demostración* hasta que el backend publique `/reservations` ([contrato propuesto](docs/API-Sprint-04-Reservas-propuesta.md)) |
+| 4 — Reservas | Reservar, confirmar, cancelar, historial | ✅ Flujo en 3 pasos, validaciones, plaza asignada, historial y cancelación contra `/api/v1/reservations` (backend rama `Sprint-04-Reservas`, [contrato](docs/API-Sprint-04-Reservas.md)) |
 | 5 — Pagos y notificaciones | — | Pendiente |
 | 6 — Calidad y calificaciones | — | Pendiente |
 
