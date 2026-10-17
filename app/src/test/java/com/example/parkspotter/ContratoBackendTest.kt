@@ -86,6 +86,7 @@ class ContratoBackendTest {
             nombre = "Garaje Contrato $unico", direccion = "Cra 7 # 60-15", descripcion = "Prueba de contrato",
             telefono = "+57 300 123 4567", precioPorHora = 4200, espaciosTotales = 4,
             abierto24h = false, horaApertura = LocalTime.of(0, 30), horaCierre = LocalTime.of(23, 59),
+            tarifaPlena = 12000, tarifaPlenaDesdeHoras = 4,
             lat = 4.6486, lng = -74.0628
         )
         val creado = garajes.crear(borrador.aRequest())
@@ -107,6 +108,8 @@ class ContratoBackendTest {
 
         val detalle = garajes.detalle(garaje.id).body()!!.aModelo()
         assertEquals(4, detalle.plazas.size)
+        assertEquals(12000, detalle.garaje.tarifaPlena)
+        assertEquals(4, detalle.garaje.tarifaPlenaDesdeHoras)
         assertTrue(detalle.plazas.all { it.estado == EstadoPlaza.AVAILABLE })
 
         // ── Sprint 3: tiempo real (SSE) — ocupar una plaza llega como evento ──
@@ -128,11 +131,11 @@ class ContratoBackendTest {
 
         // ── Sprint 4: reservar, ver en el historial y cancelar (backend rama Sprint-04-Reservas) ──
         val inicio = ZonedDateTime.now(ZoneId.of("America/Bogota")).plusDays(1).withHour(10).withMinute(0).withSecond(0).withNano(0)
-        val creada = reservas.crear(ReservationRequest(garaje.id, "CAR", "KDZ482", inicio.aIso(), inicio.plusHours(2).aIso()))
+        val creada = reservas.crear(ReservationRequest(garaje.id, "CAR", "KDZ482", inicio.aIso(), inicio.plusHours(5).aIso()))
         assertEquals("crear reserva: ${creada.errorBody()?.string()}", 201, creada.code())
         val reserva = creada.body()!!.aModelo()!!
         assertEquals(EstadoReserva.CONFIRMED, reserva.estado)
-        assertEquals(9000, reserva.total) // 4500 × 2 h
+        assertEquals(12000, reserva.total) // 5 h × 4500 = 22500, pero aplica la tarifa plena
         assertEquals(inicio.toInstant(), reserva.inicio.toInstant())
         assertNotNull(reserva.plazaCodigo)
         assertTrue(reservas.mias().body()!!.content!!.any { it.id == reserva.id })

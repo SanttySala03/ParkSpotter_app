@@ -165,6 +165,7 @@ private fun PasoHorario(estado: EstadoReservar, vm: ReservarViewModel) {
                         Spacer(Modifier.width(8.dp))
                         Text(
                             "${Formatos.pesos(garaje.precioPorHora)}/h · " +
+                                (garaje.tarifaPlena?.let { "plena ${Formatos.pesos(it)} desde ${garaje.tarifaPlenaDesdeHoras} h · " } ?: "") +
                                 if (garaje.abierto24h) "24 horas" else "${Formatos.hora(garaje.horaApertura)} – ${Formatos.hora(garaje.horaCierre)}",
                             fontSize = 13.sp, color = TextMedium
                         )
@@ -236,7 +237,7 @@ private fun PasoHorario(estado: EstadoReservar, vm: ReservarViewModel) {
                         Column(Modifier.weight(1f)) {
                             Text(Formatos.intervalo(inicio, fin, ahora), fontSize = 13.sp, color = TextMedium)
                             Text(
-                                Formatos.pesos(ReglasReserva.costo(garaje.precioPorHora, inicio, fin)),
+                                Formatos.pesos(ReglasReserva.costo(garaje, inicio, fin)),
                                 fontSize = 22.sp, fontWeight = FontWeight.Bold, color = BluePrimary
                             )
                         }
@@ -317,11 +318,15 @@ private fun PasoConfirmar(estado: EstadoReservar, vm: ReservarViewModel) {
                     FilaResumen("Salida", "${Formatos.dia(fin, ahora)}, ${Formatos.hora(fin)}")
                     FilaResumen("Duración", Formatos.duracion(java.time.Duration.between(inicio, fin)))
                     HorizontalDivider(Modifier.padding(vertical = 12.dp), color = BackgroundGray)
-                    FilaResumen("Tarifa", "${Formatos.pesos(garaje.precioPorHora)} × $horas h")
+                    FilaResumen(
+                        "Tarifa",
+                        if (ReglasReserva.aplicaTarifaPlena(garaje, horas)) "Tarifa plena (desde ${garaje.tarifaPlenaDesdeHoras} h)"
+                        else "${Formatos.pesos(garaje.precioPorHora)} × $horas h"
+                    )
                     Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text("Total", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextDark, modifier = Modifier.weight(1f))
                         Text(
-                            Formatos.pesos(ReglasReserva.costo(garaje.precioPorHora, inicio, fin)),
+                            Formatos.pesos(ReglasReserva.costo(garaje, inicio, fin)),
                             fontSize = 24.sp, fontWeight = FontWeight.Bold, color = BluePrimary
                         )
                     }

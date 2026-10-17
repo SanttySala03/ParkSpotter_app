@@ -42,8 +42,18 @@ object ReglasReserva {
     fun horasCobradas(inicio: ZonedDateTime, fin: ZonedDateTime): Int =
         ceil(Duration.between(inicio, fin).toMinutes() / 60.0).toInt().coerceAtLeast(0)
 
-    fun costo(precioPorHora: Int, inicio: ZonedDateTime, fin: ZonedDateTime): Int =
-        precioPorHora * horasCobradas(inicio, fin)
+    /** ¿Con estas horas se cobra la tarifa plena? (solo si sale más barata que las horas). */
+    fun aplicaTarifaPlena(garaje: Garaje, horas: Int): Boolean {
+        val plena = garaje.tarifaPlena ?: return false
+        val desde = garaje.tarifaPlenaDesdeHoras ?: return false
+        return horas >= desde && plena < garaje.precioPorHora * horas
+    }
+
+    /** Mismo cálculo del backend: horas completas y, desde la hora de tarifa plena, como máximo ese valor. */
+    fun costo(garaje: Garaje, inicio: ZonedDateTime, fin: ZonedDateTime): Int {
+        val horas = horasCobradas(inicio, fin)
+        return if (aplicaTarifaPlena(garaje, horas)) garaje.tarifaPlena!! else garaje.precioPorHora * horas
+    }
 
     /** ¿El intervalo cabe completo dentro del horario del garaje? Soporta horarios nocturnos (22:00–06:00). */
     fun dentroDeHorario(garaje: Garaje, inicio: ZonedDateTime, fin: ZonedDateTime): Boolean {

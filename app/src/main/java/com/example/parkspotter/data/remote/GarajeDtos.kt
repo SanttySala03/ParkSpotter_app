@@ -21,7 +21,9 @@ data class GarageRequest(
     val pricePerHour: Double,
     val open24Hours: Boolean,
     val openingTime: String?,
-    val closingTime: String?
+    val closingTime: String?,
+    val fullDayRate: Double? = null,
+    val fullDayAfterHours: Int? = null
 )
 
 /** Edición parcial: PUT /garages/{id}. Gson omite los null, así solo viaja lo que cambió. */
@@ -40,7 +42,9 @@ data class GarageUpdateRequest(
     val pricePerHour: Double? = null,
     val open24Hours: Boolean? = null,
     val openingTime: String? = null,
-    val closingTime: String? = null
+    val closingTime: String? = null,
+    val fullDayRate: Double? = null,
+    val fullDayAfterHours: Int? = null
 )
 
 data class GarageResponse(
@@ -69,7 +73,9 @@ data class GarageResponse(
     val status: String?,
     val availability: String?,
     val createdAt: String?,
-    val updatedAt: String?
+    val updatedAt: String?,
+    val fullDayRate: Double? = null,
+    val fullDayAfterHours: Int? = null
 )
 
 /** Elemento de GET /garages/search. distanceKm solo llega si se envió lat/lng. */
@@ -177,5 +183,7 @@ data class GarageDetailResponse(
     val floors: List<Int>?,
     val spots: List<ParkingSpotResponse>?,
     val createdAt: String?,
-    val updatedAt: String?
+    val updatedAt: String?,
+    val fullDayRate: Double? = null,
+    val fullDayAfterHours: Int? = null
 )

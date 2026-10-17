@@ -78,6 +78,9 @@ fun RegistrarGarajeScreen(
     var precio by rememberSaveable { mutableStateOf("") }
     var espacios by rememberSaveable { mutableStateOf("1") }
     var abierto24h by rememberSaveable { mutableStateOf(true) }
+    var conTarifaPlena by rememberSaveable { mutableStateOf(false) }
+    var tarifaPlena by rememberSaveable { mutableStateOf("") }
+    var tarifaPlenaHoras by rememberSaveable { mutableStateOf("4") }
     var apertura by remember { mutableStateOf(LocalTime.of(6, 0)) }
     var cierre by remember { mutableStateOf(LocalTime.of(22, 0)) }
     var editandoHora by remember { mutableStateOf<Boolean?>(null) } // true = apertura, false = cierre
@@ -104,6 +107,9 @@ fun RegistrarGarajeScreen(
             precio = g.precioPorHora.toString()
             espacios = g.espaciosTotales.toString()
             abierto24h = g.abierto24h
+            conTarifaPlena = g.tarifaPlena != null
+            g.tarifaPlena?.let { tarifaPlena = it.toString() }
+            g.tarifaPlenaDesdeHoras?.let { tarifaPlenaHoras = it.toString() }
             g.horaApertura?.let { apertura = it }
             g.horaCierre?.let { cierre = it }
             if (g.lat != null && g.lng != null) ubicacion = g.lat to g.lng
@@ -290,6 +296,31 @@ fun RegistrarGarajeScreen(
                 )
             }
 
+            // Tarifa plena: como en muchos parqueaderos de Bogotá, desde cierta hora se cobra un valor fijo.
+            Spacer(Modifier.height(12.dp))
+            Row(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(SurfaceWhite)
+                    .clickable { conTarifaPlena = !conTarifaPlena; limpiar() }.padding(horizontal = 14.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text("Tarifa plena", color = TextDark)
+                    Text("Desde cierta hora se cobra un valor fijo", fontSize = 12.sp, color = TextMedium)
+                }
+                Switch(
+                    checked = conTarifaPlena,
+                    onCheckedChange = { conTarifaPlena = it; limpiar() },
+                    colors = SwitchDefaults.colors(checkedTrackColor = GreenAccentDark, checkedThumbColor = SurfaceWhite)
+                )
+            }
+            if (conTarifaPlena) {
+                Spacer(Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Campo(tarifaPlenaHoras, { tarifaPlenaHoras = it.filter(Char::isDigit).take(2); limpiar() }, "Desde (horas)", "4", Modifier.weight(1f), KeyboardType.Number)
+                    Campo(tarifaPlena, { tarifaPlena = it.filter(Char::isDigit).take(7); limpiar() }, "Valor plena (COP)", "15000", Modifier.weight(1f), KeyboardType.Number)
+                }
+            }
+
             Spacer(modifier = Modifier.height(20.dp))
             Titulo("Horario")
             Row(
@@ -336,6 +367,8 @@ fun RegistrarGarajeScreen(
                         abierto24h = abierto24h,
                         horaApertura = apertura,
                         horaCierre = cierre,
+                        tarifaPlena = if (conTarifaPlena) tarifaPlena.toIntOrNull() ?: -1 else null,
+                        tarifaPlenaDesdeHoras = if (conTarifaPlena) tarifaPlenaHoras.toIntOrNull() ?: 0 else null,
                         fotos = fotos.map { it.toString() }
                     )
                     localError = ValidacionGaraje.validar(borrador)

@@ -57,7 +57,9 @@ fun GarageResponse.aModelo() = Garaje(
     horaApertura = openingTime.aHora(),
     horaCierre = closingTime.aHora(),
     estado = EstadoGaraje.de(status),
-    disponibilidad = Disponibilidad.de(availability)
+    disponibilidad = Disponibilidad.de(availability),
+    tarifaPlena = fullDayRate?.roundToInt(),
+    tarifaPlenaDesdeHoras = fullDayAfterHours
 )
 
 fun GarageSummaryResponse.aModelo() = Garaje(
@@ -139,7 +141,9 @@ fun GarageDetailResponse.aModelo(): GarajeDetalle {
         horaCierre = closingTime.aHora(),
         estado = EstadoGaraje.de(disp?.status),
         disponibilidad = Disponibilidad.de(disp?.availability),
-        abiertoAhora = disp?.openNow
+        abiertoAhora = disp?.openNow,
+        tarifaPlena = fullDayRate?.roundToInt(),
+        tarifaPlenaDesdeHoras = fullDayAfterHours
     )
     return GarajeDetalle(
         garaje = garaje,
@@ -174,7 +178,9 @@ fun Garaje.aRequest() = GarageRequest(
     pricePerHour = precioPorHora.toDouble(),
     open24Hours = abierto24h,
     openingTime = if (abierto24h) null else horaApertura?.aTexto(),
-    closingTime = if (abierto24h) null else horaCierre?.aTexto()
+    closingTime = if (abierto24h) null else horaCierre?.aTexto(),
+    fullDayRate = tarifaPlena?.toDouble(),
+    fullDayAfterHours = tarifaPlenaDesdeHoras
 )
 
 /** Edición: se envían todos los campos editables (el backend ignora los que llegan null). */
@@ -193,7 +199,10 @@ fun Garaje.aUpdateRequest() = GarageUpdateRequest(
     pricePerHour = precioPorHora.toDouble(),
     open24Hours = abierto24h,
     openingTime = if (abierto24h) null else horaApertura?.aTexto(),
-    closingTime = if (abierto24h) null else horaCierre?.aTexto()
+    closingTime = if (abierto24h) null else horaCierre?.aTexto(),
+    fullDayRate = tarifaPlena?.toDouble(),
+    // 0 = quitar la tarifa plena (contrato del backend)
+    fullDayAfterHours = if (tarifaPlena == null) 0 else tarifaPlenaDesdeHoras
 )
 
 fun ReservationResponse.aModelo(): Reserva? {

@@ -56,7 +56,7 @@ class ReservaLocalDataSource(context: Context, private val gson: Gson = Gson()) 
             endTime = s.fin.aIso(),
             status = EstadoReserva.CONFIRMED.name,
             pricePerHour = s.garaje.precioPorHora.toDouble(),
-            totalPrice = ReglasReserva.costo(s.garaje.precioPorHora, s.inicio, s.fin).toDouble(),
+            totalPrice = ReglasReserva.costo(s.garaje, s.inicio, s.fin).toDouble(),
             createdAt = ahora.aIso(),
             cancelledAt = null
         )

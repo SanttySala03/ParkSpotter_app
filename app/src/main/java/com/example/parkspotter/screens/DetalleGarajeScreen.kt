@@ -12,6 +12,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -214,6 +215,7 @@ private fun ContenidoDetalle(
                 else "${Formatos.hora(g.horaApertura)} – ${Formatos.hora(g.horaCierre)}" +
                     if (g.abiertoAhora == false) " · Cerrado ahora" else " · Abierto ahora"
             )
+            g.tarifaPlena?.let { FilaInfo(Icons.Filled.Payments, "Tarifa plena ${Formatos.pesos(it)} desde ${g.tarifaPlenaDesdeHoras} h") }
             if (g.telefono.isNotBlank()) FilaInfo(Icons.Filled.Phone, g.telefono)
             if (g.descripcion.isNotBlank()) {
                 Spacer(Modifier.height(6.dp))

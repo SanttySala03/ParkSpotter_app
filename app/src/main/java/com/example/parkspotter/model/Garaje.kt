@@ -78,6 +78,9 @@ data class Garaje(
     val disponibilidad: Disponibilidad = Disponibilidad.AVAILABLE,
     val abiertoAhora: Boolean? = null,
     val distanciaKm: Double? = null,
+    /** Tarifa plena (tope diario): desde [tarifaPlenaDesdeHoras] horas se cobra este valor. null = no tiene. */
+    val tarifaPlena: Int? = null,
+    val tarifaPlenaDesdeHoras: Int? = null,
     /** URIs locales de la vista previa: el backend aún no almacena fotos. */
     val fotos: List<String> = emptyList()
 ) {

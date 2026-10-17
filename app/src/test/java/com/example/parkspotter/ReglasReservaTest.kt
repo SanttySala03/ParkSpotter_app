@@ -98,7 +98,17 @@ class ReglasReservaTest {
         val ini = ahora
         assertEquals(1, ReglasReserva.horasCobradas(ini, ini.plusMinutes(60)))
         assertEquals(2, ReglasReserva.horasCobradas(ini, ini.plusMinutes(61)))
-        assertEquals(7000, ReglasReserva.costo(3500, ini, ini.plusHours(2)))
+        assertEquals(7000, ReglasReserva.costo(garaje24h, ini, ini.plusHours(2)))
+    }
+
+    @Test fun `desde la hora de tarifa plena se cobra el valor fijo`() {
+        val conPlena = garaje24h.copy(precioPorHora = 4000, tarifaPlena = 15000, tarifaPlenaDesdeHoras = 4)
+        assertEquals(12000, ReglasReserva.costo(conPlena, ahora, ahora.plusHours(3)))
+        assertEquals(15000, ReglasReserva.costo(conPlena, ahora, ahora.plusHours(4)))
+        assertEquals(15000, ReglasReserva.costo(conPlena, ahora, ahora.plusHours(10)))
+        // Si la plena sale más cara que las horas, se cobran las horas (igual que el backend)
+        val plenaCara = conPlena.copy(precioPorHora = 1000, tarifaPlenaDesdeHoras = 1)
+        assertEquals(8000, ReglasReserva.costo(plenaCara, ahora, ahora.plusHours(8)))
     }
 
     @Test fun `placas colombianas`() {

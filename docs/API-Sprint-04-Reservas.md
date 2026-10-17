@@ -66,6 +66,9 @@ o completarse vuelve a `AVAILABLE`.
 1. `startTime` no puede estar en el pasado (tolerancia sugerida: 10 min) ni a más de **7 días**.
 2. Duración entre **1 y 12 horas**. Se cobra cada fracción de hora completa:
    `totalPrice = pricePerHour × ceil(minutos / 60)`.
+   **Tarifa plena:** si el garaje la tiene (`fullDayRate` y `fullDayAfterHours` en `/garages`, se envían
+   juntos; `fullDayAfterHours: 0` en el PUT la quita), desde esa hora se cobra como máximo `fullDayRate`.
+   Ej.: $4.000/h con plena de $15.000 desde 4 h → 3 h = $12.000, 5 h = $15.000.
 3. Si el garaje no abre 24 h, el intervalo debe caber en su horario (soportar horarios nocturnos,
    p. ej. 20:00–06:00, igual que `OpeningHours`).
 4. El garaje debe estar `ACTIVE` y tener una plaza libre del `vehicleType` **sin otra reserva que

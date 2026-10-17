@@ -36,6 +36,8 @@ object ValidacionGaraje {
         g.telefono.isNotBlank() && !esTelefonoValido(g.telefono) -> "Teléfono inválido (7 a 20 dígitos, puede iniciar con +)"
         g.precioPorHora !in 1..1_000_000 -> "Ingresa un precio por hora válido"
         g.espaciosTotales !in 1..5000 -> "Ingresa entre 1 y 5000 plazas"
+        g.tarifaPlena != null && g.tarifaPlenaDesdeHoras !in 1..12 -> "La tarifa plena debe empezar entre la hora 1 y la 12"
+        g.tarifaPlena != null && g.tarifaPlena !in 1..1_000_000 -> "Ingresa un valor de tarifa plena válido"
         !g.abierto24h && (g.horaApertura == null || g.horaCierre == null) -> "Elige la hora de apertura y de cierre"
         !g.abierto24h && g.horaApertura == g.horaCierre -> "Apertura y cierre no pueden ser iguales (si abre todo el día, marca 24 horas)"
         else -> null
