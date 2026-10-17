@@ -23,7 +23,9 @@ data class GarageRequest(
     val openingTime: String?,
     val closingTime: String?,
     val fullDayRate: Double? = null,
-    val fullDayAfterHours: Int? = null
+    val fullDayAfterHours: Int? = null,
+    /** Cuántas de las totalSpots plazas son para moto (el resto, para carro). */
+    val motorcycleSpots: Int? = null
 )
 
 /** Edición parcial: PUT /garages/{id}. Gson omite los null, así solo viaja lo que cambió. */

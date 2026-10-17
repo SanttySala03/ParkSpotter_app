@@ -77,6 +77,8 @@ fun RegistrarGarajeScreen(
     var descripcion by rememberSaveable { mutableStateOf("") }
     var precio by rememberSaveable { mutableStateOf("") }
     var espacios by rememberSaveable { mutableStateOf("1") }
+    var tipoParqueadero by rememberSaveable { mutableStateOf(TipoParqueadero.CARROS) }
+    var cuposMoto by rememberSaveable { mutableStateOf("1") }
     var abierto24h by rememberSaveable { mutableStateOf(true) }
     var conTarifaPlena by rememberSaveable { mutableStateOf(false) }
     var tarifaPlena by rememberSaveable { mutableStateOf("") }
@@ -285,9 +287,40 @@ fun RegistrarGarajeScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
             Titulo("Capacidad y tarifa")
+            if (!esEdicion) {
+                Text("¿Para qué vehículos?", color = TextMedium, fontSize = 13.sp)
+                Spacer(Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TipoParqueadero.entries.forEach { t ->
+                        FilterChip(
+                            selected = tipoParqueadero == t,
+                            onClick = { tipoParqueadero = t; limpiar() },
+                            label = { Text(t.etiqueta) },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = FilterChipDefaults.filterChipColors(
+                                containerColor = SurfaceWhite,
+                                selectedContainerColor = BluePrimary,
+                                selectedLabelColor = SurfaceWhite
+                            )
+                        )
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Campo(precio, { precio = it.filter(Char::isDigit).take(7); limpiar() }, "Precio / hora (COP)", "3000", Modifier.weight(1f), KeyboardType.Number)
-                Campo(espacios, { espacios = it.filter(Char::isDigit).take(4); limpiar() }, "Plazas", "1", Modifier.weight(1f), KeyboardType.Number)
+                Campo(
+                    espacios, { espacios = it.filter(Char::isDigit).take(4); limpiar() },
+                    when {
+                        esEdicion -> "Plazas"
+                        tipoParqueadero == TipoParqueadero.MOTOS -> "Cupos moto"
+                        else -> "Cupos carro"
+                    },
+                    "1", Modifier.weight(1f), KeyboardType.Number
+                )
+            }
+            if (!esEdicion && tipoParqueadero == TipoParqueadero.AMBOS) {
+                Campo(cuposMoto, { cuposMoto = it.filter(Char::isDigit).take(4); limpiar() }, "Cupos moto", "1", teclado = KeyboardType.Number)
             }
             if (esEdicion) {
                 Text(
@@ -352,6 +385,12 @@ fun RegistrarGarajeScreen(
             BotonPrimario(
                 texto = if (esEdicion) "Guardar cambios" else "Publicar garaje",
                 onClick = {
+                    val principales = espacios.toIntOrNull() ?: 0
+                    val motos = if (tipoParqueadero == TipoParqueadero.AMBOS) cuposMoto.toIntOrNull() ?: 0 else 0
+                    if (!esEdicion && tipoParqueadero == TipoParqueadero.AMBOS && (principales < 1 || motos < 1)) {
+                        localError = "Indica cuántos cupos hay para carro y para moto (mínimo 1 de cada uno)"
+                        return@BotonPrimario
+                    }
                     val borrador = Garaje(
                         id = garajeId ?: "",
                         nombre = nombre,
@@ -363,7 +402,13 @@ fun RegistrarGarajeScreen(
                         telefono = telefono,
                         descripcion = descripcion,
                         precioPorHora = precio.toIntOrNull() ?: -1,
-                        espaciosTotales = espacios.toIntOrNull() ?: 0,
+                        espaciosTotales = principales + motos,
+                        // shortcut: al editar, las plazas nuevas se crean como carro; el tipo solo se elige al publicar.
+                        cuposMoto = when {
+                            esEdicion -> 0
+                            tipoParqueadero == TipoParqueadero.MOTOS -> principales
+                            else -> motos
+                        },
                         abierto24h = abierto24h,
                         horaApertura = apertura,
                         horaCierre = cierre,
@@ -413,6 +458,9 @@ fun RegistrarGarajeScreen(
         )
     }
 }
+
+/** Para qué vehículos es el parqueadero al publicarlo. */
+private enum class TipoParqueadero(val etiqueta: String) { CARROS("Carros"), MOTOS("Motos"), AMBOS("Ambos") }
 
 @Composable
 private fun Titulo(texto: String) {

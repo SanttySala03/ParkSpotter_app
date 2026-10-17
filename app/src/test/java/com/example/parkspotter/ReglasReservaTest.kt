@@ -117,6 +117,11 @@ class ReglasReservaTest {
         assertNotNull(ReglasReserva.errorPlaca("12ABC3", TipoVehiculo.CAR))
         assertNotNull(ReglasReserva.errorPlaca("", TipoVehiculo.CAR))
         assertNull(ReglasReserva.errorPlaca("", TipoVehiculo.BICYCLE))
+        // La placa debe corresponder al vehículo: carro AGH430, moto ARS90H
+        assertNull(ReglasReserva.errorPlaca("AGH430", TipoVehiculo.CAR))
+        assertNull(ReglasReserva.errorPlaca("ARS90H", TipoVehiculo.MOTORCYCLE))
+        assertNotNull(ReglasReserva.errorPlaca("ARS90H", TipoVehiculo.CAR))
+        assertNotNull(ReglasReserva.errorPlaca("AGH430", TipoVehiculo.MOTORCYCLE))
     }
 
     @Test fun `inicio sugerido redondea a la proxima media hora`() {

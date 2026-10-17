@@ -21,8 +21,15 @@ object ReglasReserva {
     /** Margen para "reservar ahora" mientras el usuario completa el formulario. */
     private val TOLERANCIA_PASADO: Duration = Duration.ofMinutes(10)
 
-    /** Placas colombianas: carro ABC123, moto ABC12D. */
-    private val REGEX_PLACA = Regex("^[A-Z]{3}[0-9]{2}[0-9A-Z]$")
+    /** Placas colombianas (6 caracteres): carro AGH430, moto ARS90H. */
+    private val PLACA_CARRO = Regex("^[A-Z]{3}[0-9]{3}$")
+    private val PLACA_MOTO = Regex("^[A-Z]{3}[0-9]{2}[A-Z]$")
+
+    fun ejemploPlaca(tipo: TipoVehiculo): String = if (tipo == TipoVehiculo.MOTORCYCLE) "ARS90H" else "AGH430"
+
+    fun formatoPlaca(tipo: TipoVehiculo): String =
+        if (tipo == TipoVehiculo.MOTORCYCLE) "3 letras, 2 números y 1 letra (ej. ARS90H)"
+        else "3 letras y 3 números (ej. AGH430)"
 
     fun normalizarPlaca(placa: String): String = placa.uppercase().filter { it.isLetterOrDigit() }
 
@@ -33,7 +40,8 @@ object ReglasReserva {
         return when {
             !placaObligatoria(tipo) && p.isEmpty() -> null
             p.isEmpty() -> "Ingresa la placa del vehículo"
-            !REGEX_PLACA.matches(p) -> "Placa inválida. Ej: ABC123 (carro) o ABC12D (moto)"
+            !(if (tipo == TipoVehiculo.MOTORCYCLE) PLACA_MOTO else PLACA_CARRO).matches(p) ->
+                "Placa de ${tipo.etiqueta.lowercase()} inválida: ${formatoPlaca(tipo)}"
             else -> null
         }
     }

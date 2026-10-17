@@ -81,6 +81,8 @@ data class Garaje(
     /** Tarifa plena (tope diario): desde [tarifaPlenaDesdeHoras] horas se cobra este valor. null = no tiene. */
     val tarifaPlena: Int? = null,
     val tarifaPlenaDesdeHoras: Int? = null,
+    /** Solo al publicar: cuántas de las [espaciosTotales] plazas son para moto. */
+    val cuposMoto: Int = 0,
     /** URIs locales de la vista previa: el backend aún no almacena fotos. */
     val fotos: List<String> = emptyList()
 ) {

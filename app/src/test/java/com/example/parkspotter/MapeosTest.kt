@@ -88,6 +88,8 @@ class MapeosTest {
         assertEquals("06:00", r.openingTime)
         assertEquals("22:30", r.closingTime)
         assertNull(r.description)
+        assertEquals(0, r.motorcycleSpots)
+        assertEquals(3, g.copy(cuposMoto = 3).aRequest().motorcycleSpots)
         val r24 = g.copy(abierto24h = true).aRequest()
         assertNull(r24.openingTime)
     }

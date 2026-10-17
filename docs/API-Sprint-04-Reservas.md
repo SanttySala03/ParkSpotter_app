@@ -74,7 +74,9 @@ o completarse vuelve a `AVAILABLE`.
 4. El garaje debe estar `ACTIVE` y tener una plaza libre del `vehicleType` **sin otra reserva que
    se cruce** en ese intervalo.
 5. Un usuario no puede tener dos reservas activas que se crucen.
-6. `vehiclePlate` obligatoria salvo `BICYCLE`; formato `^[A-Z]{3}[0-9]{2}[0-9A-Z]$` (carro ABC123, moto ABC12D).
+6. `vehiclePlate` obligatoria salvo `BICYCLE`, de 6 caracteres y según el vehículo: carro `^[A-Z]{3}[0-9]{3}$`
+   (ej. AGH430), moto `^[A-Z]{3}[0-9]{2}[A-Z]$` (ej. ARS90H). Se aceptan minúsculas, guion o espacio y se guarda normalizada.
+   Para que haya plazas de moto, el garaje se crea con `motorcycleSpots` (cuántas de `totalSpots` son para moto).
 7. **Concurrencia:** asignar la plaza con `SELECT … FOR UPDATE` (como ya hace `ParkingSpotService`)
    dentro de una transacción atómica, para que dos conductores no reserven la misma plaza.
 8. **Cambio automático de estado:** tarea programada (`@Scheduled`) que pase a `COMPLETED` las

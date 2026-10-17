@@ -44,12 +44,16 @@ data class EstadoReservar(
 
     fun fin(ahora: ZonedDateTime): ZonedDateTime? = inicio(ahora)?.plusHours(duracionHoras.toLong())
 
-    /** Tipos de vehículo que el garaje tiene (si no hay datos, al menos carro). */
+    /** Carro y moto siempre se ofrecen (sin cupos se ven deshabilitados), más otros tipos que tenga el garaje. */
     val tiposDisponibles: List<TipoVehiculo>
-        get() = detalle?.porTipo?.filter { it.total > 0 }?.map { it.tipo }?.ifEmpty { null } ?: listOf(TipoVehiculo.CAR)
+        get() = (listOf(TipoVehiculo.CAR, TipoVehiculo.MOTORCYCLE) +
+            detalle?.porTipo.orEmpty().filter { it.total > 0 }.map { it.tipo }).distinct()
 
-    val cuposDelTipo: Int?
-        get() = detalle?.porTipo?.firstOrNull { it.tipo == tipoVehiculo }?.disponibles
+    /** Cupos libres de un tipo; 0 si el garaje no tiene plazas de ese tipo, null si no hay datos. */
+    fun cupos(tipo: TipoVehiculo): Int? =
+        detalle?.porTipo?.takeIf { it.isNotEmpty() }?.let { lista -> lista.firstOrNull { it.tipo == tipo }?.disponibles ?: 0 }
+
+    val cuposDelTipo: Int? get() = cupos(tipoVehiculo)
 }
 
 /**

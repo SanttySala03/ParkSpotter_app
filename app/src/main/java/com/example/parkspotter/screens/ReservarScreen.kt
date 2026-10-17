@@ -176,7 +176,7 @@ private fun PasoHorario(estado: EstadoReservar, vm: ReservarViewModel) {
             Seccion("Vehículo")
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 estado.tiposDisponibles.forEach { tipo ->
-                    val cupos = estado.detalle.porTipo.firstOrNull { it.tipo == tipo }?.disponibles
+                    val cupos = estado.cupos(tipo)
                     ChipOpcion(
                         texto = tipo.etiqueta + (cupos?.let { " · " + Formatos.libres(it) } ?: ""),
                         seleccionado = estado.tipoVehiculo == tipo,
@@ -190,11 +190,16 @@ private fun PasoHorario(estado: EstadoReservar, vm: ReservarViewModel) {
                     value = estado.placa,
                     onValueChange = vm::cambiarPlaca,
                     label = { Text("Placa") },
-                    placeholder = { Text("ABC123") },
+                    placeholder = { Text(ReglasReserva.ejemploPlaca(estado.tipoVehiculo)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
                     isError = estado.placa.length == 6 && ReglasReserva.errorPlaca(estado.placa, estado.tipoVehiculo) != null,
-                    supportingText = { Text("Se la mostrarás al operador del garaje al llegar") },
+                    supportingText = {
+                        Text(
+                            ReglasReserva.errorPlaca(estado.placa, estado.tipoVehiculo).takeIf { estado.placa.length == 6 }
+                                ?: "Placa de ${estado.tipoVehiculo.etiqueta.lowercase()}: ${ReglasReserva.formatoPlaca(estado.tipoVehiculo)}"
+                        )
+                    },
                     shape = RoundedCornerShape(12.dp),
                     colors = camposColores(),
                     modifier = Modifier.fillMaxWidth()

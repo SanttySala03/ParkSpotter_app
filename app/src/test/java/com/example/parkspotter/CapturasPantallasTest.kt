@@ -8,6 +8,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
 import com.example.parkspotter.data.AppContainer
@@ -162,6 +163,23 @@ class CapturasPantallasTest {
         entrar("propietario.demo@parkspotter.co", RolUsuario.PROPIETARIO)
         mostrar { RegistrarGarajeScreen(garajeId = null, onGarajeGuardado = {}, onCancelar = {}) }
         capturar("12_publicar_garaje")
+    }
+
+    @Test fun formularioGarajeAmbos() {
+        entrar("propietario.demo@parkspotter.co", RolUsuario.PROPIETARIO)
+        mostrar { RegistrarGarajeScreen(garajeId = null, onGarajeGuardado = {}, onCancelar = {}) }
+        compose.onNodeWithText("Ambos").performScrollTo().performClick()
+        compose.onNodeWithText("Cupos moto").performScrollTo()
+        capturar("14_publicar_garaje_ambos")
+    }
+
+    @Test fun reservaMoto() {
+        entrar("conductor.demo@parkspotter.co")
+        val id = garajeId("Parqueadero Rosales Motos")
+        mostrar { ReservarScreen(garajeId = id, onVolver = {}, onVerReservas = {}, onIrAlMapa = {}) }
+        esperarTexto("¿Por cuánto tiempo?")
+        compose.onNodeWithText("Placa").performTextInput("AGH430")
+        capturar("15_reserva_moto_placa_carro")
     }
 
     @Test fun perfil() {

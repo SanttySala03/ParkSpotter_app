@@ -180,7 +180,8 @@ fun Garaje.aRequest() = GarageRequest(
     openingTime = if (abierto24h) null else horaApertura?.aTexto(),
     closingTime = if (abierto24h) null else horaCierre?.aTexto(),
     fullDayRate = tarifaPlena?.toDouble(),
-    fullDayAfterHours = tarifaPlenaDesdeHoras
+    fullDayAfterHours = tarifaPlenaDesdeHoras,
+    motorcycleSpots = cuposMoto
 )
 
 /** Edición: se envían todos los campos editables (el backend ignora los que llegan null). */

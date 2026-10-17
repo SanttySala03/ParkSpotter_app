@@ -16,6 +16,7 @@ import com.example.parkspotter.model.EstadoPlaza
 import com.example.parkspotter.model.EstadoReserva
 import com.example.parkspotter.model.FiltrosBusqueda
 import com.example.parkspotter.model.Garaje
+import com.example.parkspotter.model.TipoVehiculo
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
@@ -86,7 +87,7 @@ class ContratoBackendTest {
             nombre = "Garaje Contrato $unico", direccion = "Cra 7 # 60-15", descripcion = "Prueba de contrato",
             telefono = "+57 300 123 4567", precioPorHora = 4200, espaciosTotales = 4,
             abierto24h = false, horaApertura = LocalTime.of(0, 30), horaCierre = LocalTime.of(23, 59),
-            tarifaPlena = 12000, tarifaPlenaDesdeHoras = 4,
+            tarifaPlena = 12000, tarifaPlenaDesdeHoras = 4, cuposMoto = 1,
             lat = 4.6486, lng = -74.0628
         )
         val creado = garajes.crear(borrador.aRequest())
@@ -108,6 +109,8 @@ class ContratoBackendTest {
 
         val detalle = garajes.detalle(garaje.id).body()!!.aModelo()
         assertEquals(4, detalle.plazas.size)
+        assertEquals(1, detalle.porTipo.first { it.tipo == TipoVehiculo.MOTORCYCLE }.total)
+        assertEquals(3, detalle.porTipo.first { it.tipo == TipoVehiculo.CAR }.total)
         assertEquals(12000, detalle.garaje.tarifaPlena)
         assertEquals(4, detalle.garaje.tarifaPlenaDesdeHoras)
         assertTrue(detalle.plazas.all { it.estado == EstadoPlaza.AVAILABLE })
