@@ -7,7 +7,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EventBusy
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
@@ -22,7 +21,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.parkspotter.data.repository.ModoReservas
 import com.example.parkspotter.model.Reserva
 import com.example.parkspotter.ui.components.BarraInferior
 import com.example.parkspotter.ui.components.EstadoVacio
@@ -106,9 +104,6 @@ fun MisReservasScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    if (estado.modo == ModoReservas.LOCAL) {
-                        item { AvisoModoLocal() }
-                    }
                     items(lista, key = { it.id }) { r ->
                         TarjetaReserva(
                             reserva = r,
@@ -187,20 +182,5 @@ private fun TarjetaReserva(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun AvisoModoLocal() {
-    Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Blue50).padding(12.dp),
-        verticalAlignment = Alignment.Top
-    ) {
-        Icon(Icons.Filled.Info, null, tint = BluePrimary, modifier = Modifier.size(18.dp))
-        Spacer(Modifier.width(8.dp))
-        Text(
-            "Modo demostración: el backend aún no publica /api/v1/reservations, así que tus reservas se guardan en este celular.",
-            fontSize = 13.sp, color = TextDark
-        )
     }
 }

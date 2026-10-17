@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.parkspotter.data.AppContainer
-import com.example.parkspotter.data.repository.ModoReservas
 import com.example.parkspotter.data.repository.ReservaRepository
 import com.example.parkspotter.model.Reserva
 import com.example.parkspotter.util.Resource
@@ -23,8 +22,7 @@ data class EstadoMisReservas(
     val cargando: Boolean = false,
     val cancelando: String? = null,
     val error: String? = null,
-    val mensaje: String? = null,
-    val modo: ModoReservas = ModoReservas.DESCONOCIDO
+    val mensaje: String? = null
 )
 
 /** Sprint 4 — Historial de reservas: próximas/en curso e historial, con cancelación. */
@@ -46,7 +44,7 @@ class MisReservasViewModel(
                 is Resource.Error -> _estado.update { it.copy(error = r.message) }
                 Resource.Loading -> Unit
             }
-            _estado.update { it.copy(cargando = false, modo = repository.modo) }
+            _estado.update { it.copy(cargando = false) }
         }
     }
 

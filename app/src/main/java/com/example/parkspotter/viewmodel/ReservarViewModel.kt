@@ -7,7 +7,6 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.parkspotter.data.AppContainer
 import com.example.parkspotter.data.repository.GarajeRepository
-import com.example.parkspotter.data.repository.ModoReservas
 import com.example.parkspotter.data.repository.ReservaRepository
 import com.example.parkspotter.model.GarajeDetalle
 import com.example.parkspotter.model.Reserva
@@ -38,8 +37,7 @@ data class EstadoReservar(
     val duracionHoras: Int = 2,
     val enviando: Boolean = false,
     val error: String? = null,
-    val reserva: Reserva? = null,
-    val modo: ModoReservas = ModoReservas.DESCONOCIDO
+    val reserva: Reserva? = null
 ) {
     fun inicio(ahora: ZonedDateTime): ZonedDateTime? =
         if (fecha != null && horaInicio != null) fecha.atTime(horaInicio).atZone(ahora.zone) else null
@@ -87,8 +85,7 @@ class ReservarViewModel(
                             cargando = false,
                             tipoVehiculo = if (s.tipoVehiculo in tipos || tipos.isEmpty()) s.tipoVehiculo else tipos.first(),
                             fecha = sugerido.toLocalDate(),
-                            horaInicio = sugerido.toLocalTime(),
-                            modo = reservas.modo
+                            horaInicio = sugerido.toLocalTime()
                         )
                     }
                 }
@@ -146,7 +143,7 @@ class ReservarViewModel(
             }
             when (val r = reservas.crear(s)) {
                 is Resource.Success -> _estado.update {
-                    it.copy(enviando = false, reserva = r.data, paso = PasoReserva.LISTO, modo = reservas.modo)
+                    it.copy(enviando = false, reserva = r.data, paso = PasoReserva.LISTO)
                 }
                 is Resource.Error -> _estado.update {
                     it.copy(enviando = false, error = if (r.codigo == 409) "Ya no hay cupo en ese horario: elige otro" else r.message)

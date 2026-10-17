@@ -29,7 +29,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.parkspotter.data.repository.ModoReservas
 import com.example.parkspotter.model.Reserva
 import com.example.parkspotter.ui.components.BotonPrimario
 import com.example.parkspotter.ui.components.EstadoVacio
@@ -101,7 +100,7 @@ fun ReservarScreen(
                         PasoReserva.HORARIO -> PasoHorario(estado, viewModel)
                         PasoReserva.CONFIRMAR -> PasoConfirmar(estado, viewModel)
                         PasoReserva.LISTO -> estado.reserva?.let {
-                            PasoListo(it, estado.modo, viewModel.ahora(), onVerReservas, onIrAlMapa)
+                            PasoListo(it, viewModel.ahora(), onVerReservas, onIrAlMapa)
                         }
                     }
                 }
@@ -330,10 +329,6 @@ private fun PasoConfirmar(estado: EstadoReservar, vm: ReservarViewModel) {
             }
             Spacer(Modifier.height(12.dp))
             Nota("El pago se realiza en el garaje (los pagos en la app llegan en el Sprint 5). Puedes cancelar sin costo antes de la hora de llegada.")
-            if (estado.modo == ModoReservas.LOCAL) {
-                Spacer(Modifier.height(8.dp))
-                Nota("Modo demostración: el servidor aún no tiene el módulo de reservas, así que esta reserva se guardará en este celular.")
-            }
             estado.error?.let { MensajeError(it) }
         }
         Surface(color = SurfaceWhite, shadowElevation = 12.dp) {
@@ -364,7 +359,6 @@ private fun PasoConfirmar(estado: EstadoReservar, vm: ReservarViewModel) {
 @Composable
 private fun PasoListo(
     reserva: Reserva,
-    modo: ModoReservas,
     ahora: java.time.ZonedDateTime,
     onVerReservas: () -> Unit,
     onIrAlMapa: () -> Unit
@@ -396,10 +390,6 @@ private fun PasoListo(
                 )
                 reserva.plazaCodigo?.let { Text("Plaza $it", color = SurfaceWhite, fontSize = 14.sp, fontWeight = FontWeight.SemiBold) }
             }
-        }
-        if (modo == ModoReservas.LOCAL) {
-            Spacer(Modifier.height(12.dp))
-            Nota("Guardada en este celular (modo demostración) hasta que el backend publique el módulo de reservas.")
         }
         Spacer(Modifier.height(24.dp))
         BotonPrimario("Ver mis reservas", onClick = onVerReservas, modifier = Modifier.fillMaxWidth())
