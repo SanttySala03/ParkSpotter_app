@@ -57,7 +57,8 @@ fun ReservarScreen(
     garajeId: String,
     onVolver: () -> Unit,
     onVerReservas: () -> Unit,
-    onIrAlMapa: () -> Unit
+    onIrAlMapa: () -> Unit,
+    onPagar: (String) -> Unit
 ) {
     val viewModel: ReservarViewModel = viewModel(factory = ReservarViewModel.Factory)
     val estado by viewModel.estado.collectAsState()
@@ -100,7 +101,7 @@ fun ReservarScreen(
                         PasoReserva.HORARIO -> PasoHorario(estado, viewModel)
                         PasoReserva.CONFIRMAR -> PasoConfirmar(estado, viewModel)
                         PasoReserva.LISTO -> estado.reserva?.let {
-                            PasoListo(it, viewModel.ahora(), onVerReservas, onIrAlMapa)
+                            PasoListo(it, viewModel.ahora(), onVerReservas, onIrAlMapa, onPagar)
                         }
                     }
                 }
@@ -338,7 +339,7 @@ private fun PasoConfirmar(estado: EstadoReservar, vm: ReservarViewModel) {
                 }
             }
             Spacer(Modifier.height(12.dp))
-            Nota("El pago se realiza en el garaje (los pagos en la app llegan en el Sprint 5). Puedes cancelar sin costo antes de la hora de llegada.")
+            Nota("Al confirmar puedes pagar con tarjeta en la app o después desde Mis reservas. Si cancelas antes de la hora de llegada no tiene costo y, si ya pagaste, te devolvemos el dinero.")
             estado.error?.let { MensajeError(it) }
         }
         Surface(color = SurfaceWhite, shadowElevation = 12.dp) {
@@ -371,7 +372,8 @@ private fun PasoListo(
     reserva: Reserva,
     ahora: java.time.ZonedDateTime,
     onVerReservas: () -> Unit,
-    onIrAlMapa: () -> Unit
+    onIrAlMapa: () -> Unit,
+    onPagar: (String) -> Unit
 ) {
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
@@ -402,7 +404,12 @@ private fun PasoListo(
             }
         }
         Spacer(Modifier.height(24.dp))
-        BotonPrimario("Ver mis reservas", onClick = onVerReservas, modifier = Modifier.fillMaxWidth())
+        BotonPrimario("Pagar ahora ${Formatos.pesos(reserva.total)}", onClick = { onPagar(reserva.id) }, acento = true,
+            modifier = Modifier.fillMaxWidth())
+        Spacer(Modifier.height(10.dp))
+        OutlinedButton(onClick = onVerReservas, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(14.dp)) {
+            Text("Pagar después", color = BluePrimary)
+        }
         Spacer(Modifier.height(10.dp))
         TextButton(onClick = onIrAlMapa) { Text("Volver al mapa", color = BluePrimary) }
     }

@@ -15,11 +15,14 @@ import androidx.navigation.navArgument
 import com.example.parkspotter.data.AppContainer
 import com.example.parkspotter.data.session.SessionManager
 import com.example.parkspotter.model.RolUsuario
+import com.example.parkspotter.screens.ComprobanteScreen
 import com.example.parkspotter.screens.DetalleGarajeScreen
 import com.example.parkspotter.screens.LoginScreen
 import com.example.parkspotter.screens.MapaScreen
 import com.example.parkspotter.screens.MisGarajesScreen
 import com.example.parkspotter.screens.MisReservasScreen
+import com.example.parkspotter.screens.NotificacionesScreen
+import com.example.parkspotter.screens.PagoScreen
 import com.example.parkspotter.screens.PerfilScreen
 import com.example.parkspotter.screens.RegisterScreen
 import com.example.parkspotter.screens.RegistrarGarajeScreen
@@ -42,12 +45,18 @@ object Rutas {
     const val REGISTRAR_GARAJE = "registrar_garaje" // Sprint 2 — alta / edición
     const val DETALLE = "garaje"                // Sprint 3 — detalle (y gestión de plazas del propietario)
     const val RESERVAR = "reservar"             // Sprint 4 — flujo de reserva
+    const val PAGAR = "pagar"                   // Sprint 5 — pago con tarjeta
+    const val COMPROBANTE = "comprobante"       // Sprint 5 — comprobante de pago
+    const val AVISOS = "avisos"                 // Sprint 5 — bandeja de notificaciones
+    const val ARG_RESERVA_ID = "reservaId"
     const val ARG_GARAJE_ID = "garajeId"
     const val ARG_PROPIETARIO = "propietario"
 
     fun editarGaraje(id: String) = "$REGISTRAR_GARAJE?$ARG_GARAJE_ID=$id"
     fun detalle(id: String, propietario: Boolean = false) = "$DETALLE/$id?$ARG_PROPIETARIO=$propietario"
     fun reservar(id: String) = "$RESERVAR/$id"
+    fun pagar(reservaId: String) = "$PAGAR/$reservaId"
+    fun comprobante(reservaId: String) = "$COMPROBANTE/$reservaId"
     fun inicioPara(rol: RolUsuario) = if (rol == RolUsuario.PROPIETARIO) MIS_GARAJES else MAPA
 
     fun de(p: Pestana) = when (p) {
@@ -59,7 +68,12 @@ object Rutas {
 }
 
 @Composable
-fun NavGraph(navController: NavHostController = rememberNavController()) {
+fun NavGraph(
+    /** Pantalla pedida al tocar una notificación (MainActivity.DESTINO_RESERVAS) o null. */
+    destino: String? = null,
+    onDestinoAtendido: () -> Unit = {},
+    navController: NavHostController = rememberNavController()
+) {
     val session = AppContainer.session
     val auth = AppContainer.authRepository
     var esPropietario by remember { mutableStateOf(auth.rolGuardado() == RolUsuario.PROPIETARIO) }
@@ -92,13 +106,28 @@ fun NavGraph(navController: NavHostController = rememberNavController()) {
         SessionManager.sesionExpirada.collect { irALogin() }
     }
 
+    // Al tocar un aviso con la app ya abierta (el splash atiende el caso de la app cerrada).
+    LaunchedEffect(destino) {
+        val enSplash = navController.currentDestination?.route == Rutas.SPLASH
+        if (destino != null && !enSplash && session.isLoggedIn) {
+            irAPestana(Pestana.RESERVAS)
+            onDestinoAtendido()
+        }
+    }
+
     NavHost(navController = navController, startDestination = Rutas.SPLASH) {
 
         composable(Rutas.SPLASH) {
             SplashScreen(
                 onFinished = {
                     // Sesión persistente: si ya hay tokens guardados se entra directo.
-                    if (session.isLoggedIn) entrar(auth.rolGuardado()) else irALogin()
+                    if (session.isLoggedIn) {
+                        entrar(auth.rolGuardado())
+                        if (destino != null) {
+                            irAPestana(Pestana.RESERVAS)
+                            onDestinoAtendido()
+                        }
+                    } else irALogin()
                 }
             )
         }
@@ -131,7 +160,10 @@ fun NavGraph(navController: NavHostController = rememberNavController()) {
             MisReservasScreen(
                 esPropietario = esPropietario,
                 onPestana = ::irAPestana,
-                onVerGaraje = { id -> navController.navigate(Rutas.detalle(id)) }
+                onVerGaraje = { id -> navController.navigate(Rutas.detalle(id)) },
+                onPagar = { id -> navController.navigate(Rutas.pagar(id)) },
+                onComprobante = { id -> navController.navigate(Rutas.comprobante(id)) },
+                onAvisos = { navController.navigate(Rutas.AVISOS) }
             )
         }
 
@@ -193,7 +225,41 @@ fun NavGraph(navController: NavHostController = rememberNavController()) {
                 garajeId = entry.arguments?.getString(Rutas.ARG_GARAJE_ID).orEmpty(),
                 onVolver = { navController.popBackStack() },
                 onVerReservas = { irAPestana(Pestana.RESERVAS) },
-                onIrAlMapa = { irAPestana(Pestana.MAPA) }
+                onIrAlMapa = { irAPestana(Pestana.MAPA) },
+                onPagar = { id -> navController.navigate(Rutas.pagar(id)) }
+            )
+        }
+
+        // ── Sprint 5: pagos y avisos ──
+        composable(
+            route = "${Rutas.PAGAR}/{${Rutas.ARG_RESERVA_ID}}",
+            arguments = listOf(navArgument(Rutas.ARG_RESERVA_ID) { type = NavType.StringType })
+        ) { entry ->
+            PagoScreen(
+                reservaId = entry.arguments?.getString(Rutas.ARG_RESERVA_ID).orEmpty(),
+                onVolver = { navController.popBackStack() },
+                onAprobado = { id ->
+                    navController.navigate(Rutas.comprobante(id)) {
+                        popUpTo("${Rutas.PAGAR}/{${Rutas.ARG_RESERVA_ID}}") { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable(
+            route = "${Rutas.COMPROBANTE}/{${Rutas.ARG_RESERVA_ID}}",
+            arguments = listOf(navArgument(Rutas.ARG_RESERVA_ID) { type = NavType.StringType })
+        ) { entry ->
+            ComprobanteScreen(
+                reservaId = entry.arguments?.getString(Rutas.ARG_RESERVA_ID).orEmpty(),
+                onVolver = { navController.popBackStack() }
+            )
+        }
+
+        composable(Rutas.AVISOS) {
+            NotificacionesScreen(
+                onVolver = { navController.popBackStack() },
+                onAbrirReserva = { irAPestana(Pestana.RESERVAS) }
             )
         }
     }

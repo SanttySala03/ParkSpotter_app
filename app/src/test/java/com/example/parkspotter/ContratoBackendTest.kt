@@ -6,7 +6,13 @@ import com.example.parkspotter.data.remote.GarageUpdateRequest
 import com.example.parkspotter.data.remote.GarajeApi
 import com.example.parkspotter.data.remote.LoginRequest
 import com.example.parkspotter.data.remote.RegisterRequest
+import com.example.parkspotter.data.remote.NotificacionApi
+import com.example.parkspotter.data.remote.PagoApi
 import com.example.parkspotter.data.remote.ReservaApi
+import com.example.parkspotter.data.repository.PagoRepository
+import com.example.parkspotter.model.EstadoPago
+import com.example.parkspotter.util.Resource
+import com.example.parkspotter.util.Tarjeta
 import com.example.parkspotter.data.remote.ReservationRequest
 import com.example.parkspotter.data.remote.aIso
 import com.example.parkspotter.data.remote.aModelo
@@ -70,6 +76,8 @@ class ContratoBackendTest {
         val auth = retrofit.create(AuthApi::class.java)
         val garajes = retrofit.create(GarajeApi::class.java)
         val reservas = retrofit.create(ReservaApi::class.java)
+        val pagos = PagoRepository(retrofit.create(PagoApi::class.java))
+        val avisos = retrofit.create(NotificacionApi::class.java)
         val unico = System.currentTimeMillis()
 
         // ── Sprint 1: registro, login y perfil ──
@@ -142,7 +150,22 @@ class ContratoBackendTest {
         assertEquals(inicio.toInstant(), reserva.inicio.toInstant())
         assertNotNull(reserva.plazaCodigo)
         assertTrue(reservas.mias().body()!!.content!!.any { it.id == reserva.id })
-        assertEquals("CANCELLED", reservas.cancelar(reserva.id).body()!!.status)
+
+        // ── Sprint 5: pagar con tarjeta tokenizada, comprobante, aviso y reembolso al cancelar ──
+        val pagoCreado = pagos.pagar(reserva.id, Tarjeta.PRUEBA_APROBADA, "contrato-$unico")
+        assertTrue("pagar: $pagoCreado", pagoCreado is Resource.Success)
+        var pago = (pagoCreado as Resource.Success).data
+        repeat(20) { if (pago.estado == EstadoPago.PENDING) { delay(500); pago = (pagos.obtener(pago.id) as Resource.Success).data } }
+        assertEquals(EstadoPago.APPROVED, pago.estado)
+        assertEquals(12000, pago.monto)
+        assertTrue(pago.comprobante!!.startsWith("CP-"))
+        assertEquals("4242", pago.ultimos4)
+        assertEquals(EstadoPago.APPROVED, reservas.obtener(reserva.id).body()!!.aModelo()!!.estadoPago)
+        assertTrue(avisos.listar().body()!!.content!!.any { it.type == "PAYMENT_APPROVED" && it.reservationId == reserva.id })
+
+        val cancelada = reservas.cancelar(reserva.id).body()!!
+        assertEquals("CANCELLED", cancelada.status)
+        assertEquals("REFUNDED", cancelada.paymentStatus)
 
         // Limpieza
         assertEquals(204, garajes.eliminar(garaje.id).code())

@@ -57,5 +57,7 @@ data class ReservationResponse(
     val pricePerHour: Double?,
     val totalPrice: Double?,
     val createdAt: String?,
-    val cancelledAt: String?
+    val cancelledAt: String?,
+    /** null = sin pagar; PENDING | APPROVED | DECLINED | REFUNDED (Sprint 5). */
+    val paymentStatus: String? = null
 )

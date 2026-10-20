@@ -16,7 +16,7 @@ Backend: [ParkSpotter-BackEnd](https://github.com/Circunvalar/ParkSpotter-BackEn
 | 2 — Gestión de garajes | Publicar y administrar garajes | ✅ Crear/editar/eliminar, publicar/ocultar, ocupar/liberar plazas |
 | 3 — Búsqueda y mapa en tiempo real | Encontrar parqueadero cerca | ✅ Mapa con carga por área visible, lista, filtros, detalle con plazas por piso, disponibilidad en vivo (SSE) |
 | 4 — Reservas | Reservar, confirmar, cancelar, historial | ✅ Flujo en 3 pasos, validaciones, plaza asignada, historial y cancelación contra `/api/v1/reservations` (backend rama `Sprint-04-Reservas`, [contrato](docs/API-Sprint-04-Reservas.md)) |
-| 5 — Pagos y notificaciones | — | Pendiente |
+| 5 — Pagos y notificaciones | Pagar reservas y recibir avisos | ✅ Pago con tarjeta tokenizada en el celular (pasarela simulada), comprobante para compartir, reembolso al cancelar, bandeja de avisos y notificaciones del sistema con la app abierta (backend rama `Sprint-05-Pagos`) |
 | 6 — Calidad y calificaciones | — | Pendiente |
 
 ## Tecnologías
@@ -46,7 +46,7 @@ Kotlin · Jetpack Compose (Material 3) · Navigation Compose · ViewModel + Stat
 ./gradlew :app:testDebugUnitTest
 ```
 
-- `ReglasReservaTest`, `MapeosTest`: reglas de negocio y traducción del JSON del backend.
+- `ReglasReservaTest`, `MapeosTest`, `TarjetaTest`: reglas de negocio, tarjeta (Luhn, franquicia, vencimiento) y traducción del JSON del backend.
 - `ContratoBackendTest`: recorre el flujo completo contra un backend real (registro → garaje →
   búsqueda → mapa → detalle → evento SSE → edición). Se activa con
   `PARKSPOTTER_API=http://localhost:8080/api/v1/`.

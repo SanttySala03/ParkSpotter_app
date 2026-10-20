@@ -30,6 +30,12 @@ object ApiClient {
     fun createReservaApi(context: Context): ReservaApi =
         getRetrofit(context).create(ReservaApi::class.java)
 
+    fun createPagoApi(context: Context): PagoApi =
+        getRetrofit(context).create(PagoApi::class.java)
+
+    fun createNotificacionApi(context: Context): NotificacionApi =
+        getRetrofit(context).create(NotificacionApi::class.java)
+
     /**
      * Cliente para los streams SSE de disponibilidad (Sprint 3). Sin timeout de lectura:
      * la conexión queda abierta y el backend envía un "ping" cada 25 s.

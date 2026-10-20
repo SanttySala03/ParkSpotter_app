@@ -30,7 +30,8 @@ data class Reserva(
     val precioPorHora: Int,
     val total: Int,
     val creadaEn: ZonedDateTime?,
-    val canceladaEn: ZonedDateTime?
+    val canceladaEn: ZonedDateTime?,
+    val estadoPago: EstadoPago? = null
 ) {
     val duracion: Duration get() = Duration.between(inicio, fin)
 
@@ -39,6 +40,10 @@ data class Reserva(
         (estado == EstadoReserva.PENDING || estado == EstadoReserva.CONFIRMED) && fin.isAfter(ahora)
 
     fun enCurso(ahora: ZonedDateTime): Boolean = esActiva(ahora) && !inicio.isAfter(ahora)
+
+    /** Se puede pagar en la app mientras esté vigente y no tenga un pago aprobado o en proceso. */
+    fun pagable(ahora: ZonedDateTime): Boolean =
+        esActiva(ahora) && estadoPago != EstadoPago.APPROVED && estadoPago != EstadoPago.PENDING
 
     /** Solo se cancela antes de que empiece. */
     fun cancelable(ahora: ZonedDateTime): Boolean = esActiva(ahora) && inicio.isAfter(ahora)

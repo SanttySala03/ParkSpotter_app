@@ -94,6 +94,20 @@ class ReservaRepository(
             ?: Resource.Error("No encontramos esa reserva")
     }
 
+    /** Una reserva (para la pantalla de pago). */
+    suspend fun obtener(id: String): Resource<Reserva> {
+        if (modo == ModoReservas.REMOTO) {
+            return when (val r = safeApiCall { api.obtener(id) }) {
+                is Resource.Success -> r.data.aModelo()?.let { Resource.Success(it) }
+                    ?: Resource.Error("El servidor devolvió una reserva incompleta")
+                is Resource.Error -> r
+                Resource.Loading -> Resource.Loading
+            }
+        }
+        return local.listar(email).firstOrNull { it.id == id }?.aModelo()?.let { Resource.Success(it) }
+            ?: Resource.Error("No encontramos esa reserva")
+    }
+
     fun ultimaPlaca(): String = perfiles.ultimaPlaca(email)
 
     /** Próximas primero (por inicio ascendente); el historial se ordena en la UI. */

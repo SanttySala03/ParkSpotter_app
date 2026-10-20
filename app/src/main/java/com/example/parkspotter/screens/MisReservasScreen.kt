@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EventBusy
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
@@ -21,10 +22,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.parkspotter.data.AppContainer
+import com.example.parkspotter.model.EstadoPago
 import com.example.parkspotter.model.Reserva
 import com.example.parkspotter.ui.components.BarraInferior
 import com.example.parkspotter.ui.components.EstadoVacio
 import com.example.parkspotter.ui.components.Pestana
+import com.example.parkspotter.ui.components.Pildora
 import com.example.parkspotter.ui.components.PildoraReserva
 import com.example.parkspotter.ui.theme.*
 import com.example.parkspotter.util.Formatos
@@ -37,7 +41,10 @@ import java.time.ZonedDateTime
 fun MisReservasScreen(
     esPropietario: Boolean,
     onPestana: (Pestana) -> Unit,
-    onVerGaraje: (String) -> Unit
+    onVerGaraje: (String) -> Unit,
+    onPagar: (String) -> Unit,
+    onComprobante: (String) -> Unit,
+    onAvisos: () -> Unit
 ) {
     val viewModel: MisReservasViewModel = viewModel(factory = MisReservasViewModel.Factory)
     val estado by viewModel.estado.collectAsState()
@@ -45,6 +52,7 @@ fun MisReservasScreen(
     var aCancelar by remember { mutableStateOf<Reserva?>(null) }
     val snackbar = remember { SnackbarHostState() }
     val ahora = viewModel.ahora()
+    val noLeidas by AppContainer.avisos.noLeidas.collectAsState()
 
     LaunchedEffect(Unit) { viewModel.cargar() }
     LaunchedEffect(estado.mensaje, estado.error) {
@@ -64,6 +72,11 @@ fun MisReservasScreen(
                 TopAppBar(
                     title = { Text("Mis reservas", color = SurfaceWhite, fontWeight = FontWeight.SemiBold) },
                     actions = {
+                        IconButton(onClick = onAvisos) {
+                            BadgedBox(badge = {
+                                if (noLeidas > 0) Badge(containerColor = GreenAccent, contentColor = BluePrimary) { Text("$noLeidas") }
+                            }) { Icon(Icons.Filled.Notifications, "Avisos ($noLeidas sin leer)", tint = SurfaceWhite) }
+                        }
                         IconButton(onClick = viewModel::cargar) { Icon(Icons.Filled.Refresh, "Actualizar", tint = SurfaceWhite) }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = BluePrimary)
@@ -110,7 +123,9 @@ fun MisReservasScreen(
                             ahora = ahora,
                             cancelando = estado.cancelando == r.id,
                             onCancelar = { aCancelar = r },
-                            onVerGaraje = { onVerGaraje(r.garajeId) }
+                            onVerGaraje = { onVerGaraje(r.garajeId) },
+                            onPagar = { onPagar(r.id) },
+                            onComprobante = { onComprobante(r.id) }
                         )
                     }
                 }
@@ -123,7 +138,11 @@ fun MisReservasScreen(
             onDismissRequest = { aCancelar = null },
             title = { Text("¿Cancelar la reserva?") },
             text = {
-                Text("Se liberará tu espacio en ${r.garajeNombre} para ${Formatos.intervalo(r.inicio, r.fin, ahora).lowercase()}. Esta acción no se puede deshacer.")
+                Text(
+                    "Se liberará tu espacio en ${r.garajeNombre} para ${Formatos.intervalo(r.inicio, r.fin, ahora).lowercase()}. " +
+                        (if (r.estadoPago == EstadoPago.APPROVED) "Te devolveremos ${Formatos.pesos(r.total)} a tu tarjeta. " else "") +
+                        "Esta acción no se puede deshacer."
+                )
             },
             confirmButton = {
                 TextButton(onClick = { viewModel.cancelar(r); aCancelar = null }) {
@@ -141,7 +160,9 @@ private fun TarjetaReserva(
     ahora: ZonedDateTime,
     cancelando: Boolean,
     onCancelar: () -> Unit,
-    onVerGaraje: () -> Unit
+    onVerGaraje: () -> Unit,
+    onPagar: () -> Unit,
+    onComprobante: () -> Unit
 ) {
     val enCurso = reserva.enCurso(ahora)
     Surface(shape = RoundedCornerShape(18.dp), color = SurfaceWhite, modifier = Modifier.fillMaxWidth()) {
@@ -173,9 +194,23 @@ private fun TarjetaReserva(
                     Text(reserva.codigo, fontSize = 12.sp, color = TextMedium, letterSpacing = 1.sp)
                 }
             }
+            reserva.estadoPago?.let { e ->
+                Spacer(Modifier.height(8.dp))
+                Pildora(
+                    e.etiqueta,
+                    fondo = if (e == EstadoPago.APPROVED) Green50 else if (e == EstadoPago.DECLINED) RedError.copy(alpha = 0.1f) else Blue50,
+                    color = if (e == EstadoPago.APPROVED) GreenAccentDark else if (e == EstadoPago.DECLINED) RedError else BluePrimary
+                )
+            }
             Spacer(Modifier.height(4.dp))
             Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
                 TextButton(onClick = onVerGaraje) { Text("Ver garaje", color = BluePrimary) }
+                if (reserva.estadoPago == EstadoPago.APPROVED || reserva.estadoPago == EstadoPago.REFUNDED) {
+                    TextButton(onClick = onComprobante) { Text("Comprobante", color = BluePrimary) }
+                }
+                if (reserva.pagable(ahora)) {
+                    TextButton(onClick = onPagar) { Text("Pagar", color = GreenAccentDark, fontWeight = FontWeight.Bold) }
+                }
                 if (reserva.cancelable(ahora)) {
                     if (cancelando) CircularProgressIndicator(Modifier.padding(12.dp).size(20.dp), strokeWidth = 2.dp)
                     else TextButton(onClick = onCancelar) { Text("Cancelar", color = RedError) }

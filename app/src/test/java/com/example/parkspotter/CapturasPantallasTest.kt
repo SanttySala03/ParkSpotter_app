@@ -12,11 +12,15 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
 import com.example.parkspotter.data.AppContainer
+import com.example.parkspotter.model.EstadoPago
 import com.example.parkspotter.model.FiltrosBusqueda
 import com.example.parkspotter.model.RolUsuario
 import com.example.parkspotter.model.SolicitudReserva
 import com.example.parkspotter.model.TipoVehiculo
+import com.example.parkspotter.screens.ComprobanteScreen
 import com.example.parkspotter.screens.DetalleGarajeScreen
+import com.example.parkspotter.screens.NotificacionesScreen
+import com.example.parkspotter.screens.PagoScreen
 import com.example.parkspotter.screens.LoginScreen
 import com.example.parkspotter.screens.MisGarajesScreen
 import com.example.parkspotter.screens.MisReservasScreen
@@ -27,6 +31,7 @@ import com.example.parkspotter.screens.ReservarScreen
 import com.example.parkspotter.screens.SplashScreen
 import com.example.parkspotter.ui.theme.ParkSpotterTheme
 import com.example.parkspotter.util.Resource
+import com.example.parkspotter.util.Tarjeta
 import kotlinx.coroutines.runBlocking
 import org.junit.Assume.assumeTrue
 import org.junit.Before
@@ -36,6 +41,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import org.robolectric.shadows.ShadowLooper
+import java.util.concurrent.TimeUnit
 import java.io.File
 
 /**
@@ -116,7 +123,7 @@ class CapturasPantallasTest {
     @Test fun flujoReserva() {
         entrar("conductor.demo@parkspotter.co")
         val id = garajeId("Parqueadero Chapinero 60")
-        mostrar { ReservarScreen(garajeId = id, onVolver = {}, onVerReservas = {}, onIrAlMapa = {}) }
+        mostrar { ReservarScreen(garajeId = id, onVolver = {}, onVerReservas = {}, onIrAlMapa = {}, onPagar = {}) }
         esperarTexto("¿Por cuánto tiempo?")
         compose.onNodeWithText("Placa").performTextInput("KDZ482")
         capturar("06_reserva_paso1_horario")
@@ -140,7 +147,7 @@ class CapturasPantallasTest {
             )
             AppContainer.reservaRepository.cancelar((otro as Resource.Success).data.id)
         }
-        mostrar { MisReservasScreen(esPropietario = false, onPestana = {}, onVerGaraje = {}) }
+        mostrar { MisReservasScreen(esPropietario = false, onPestana = {}, onVerGaraje = {}, onPagar = {}, onComprobante = {}, onAvisos = {}) }
         esperarTexto("Garaje Zona G")
         capturar("09_mis_reservas")
     }
@@ -176,10 +183,67 @@ class CapturasPantallasTest {
     @Test fun reservaMoto() {
         entrar("conductor.demo@parkspotter.co")
         val id = garajeId("Parqueadero Rosales Motos")
-        mostrar { ReservarScreen(garajeId = id, onVolver = {}, onVerReservas = {}, onIrAlMapa = {}) }
+        mostrar { ReservarScreen(garajeId = id, onVolver = {}, onVerReservas = {}, onIrAlMapa = {}, onPagar = {}) }
         esperarTexto("¿Por cuánto tiempo?")
         compose.onNodeWithText("Placa").performTextInput("AGH430")
         capturar("15_reserva_moto_placa_carro")
+    }
+
+    @Test fun pagoYComprobante() {
+        entrar("conductor.demo@parkspotter.co")
+        val id = garajeId("Garaje Javeriana")
+        val reserva = runBlocking {
+            val garaje = (AppContainer.garajeRepository.detalle(id) as Resource.Success).data.garaje
+            val inicio = AppContainer.reloj().plusDays(2).withHour(8).withMinute(0).withSecond(0).withNano(0)
+            (AppContainer.reservaRepository.crear(SolicitudReserva(garaje, TipoVehiculo.CAR, "AGH430", inicio, inicio.plusHours(2)))
+                as Resource.Success).data
+        }
+        var aprobado: String? = null
+        mostrar { PagoScreen(reservaId = reserva.id, onVolver = {}, onAprobado = { aprobado = it }) }
+        esperarTexto("Total a pagar")
+        compose.onNodeWithText("Número de la tarjeta").performTextInput("4242424242424242")
+        compose.onNodeWithText("Vence (MM/AA)").performTextInput("12/29")
+        compose.onNodeWithText("CVV").performTextInput("123")
+        compose.onNodeWithText("Nombre en la tarjeta").performTextInput("ANA PEREZ")
+        capturar("16_pago_tarjeta")
+        compose.onNodeWithText("Pagar $", substring = true).performClick()
+        // En Robolectric el reloj del hilo principal no avanza solo: se avanza para que corran las consultas de cada segundo.
+        repeat(40) {
+            if (aprobado == null) {
+                ShadowLooper.idleMainLooper(500, TimeUnit.MILLISECONDS)
+                compose.waitForIdle()
+                Thread.sleep(250)
+            }
+        }
+        check(aprobado != null) { "La app no vio el pago aprobado" }
+    }
+
+    @Test fun comprobante() {
+        entrar("conductor.demo@parkspotter.co")
+        val reservaId = reservaPagada(diasAdelante = 3)
+        mostrar { ComprobanteScreen(reservaId = reservaId, onVolver = {}) }
+        esperarTexto("Pago aprobado")
+        capturar("17_comprobante")
+    }
+
+    @Test fun avisos() {
+        entrar("conductor.demo@parkspotter.co")
+        reservaPagada(diasAdelante = 4)
+        mostrar { NotificacionesScreen(onVolver = {}, onAbrirReserva = {}) }
+        esperarTexto("Pago aprobado")
+        capturar("18_avisos")
+    }
+
+    /** Crea una reserva en Garaje Javeriana y la paga con la tarjeta de prueba; devuelve su id. */
+    private fun reservaPagada(diasAdelante: Long): String = runBlocking {
+        val garaje = (AppContainer.garajeRepository.detalle(garajeId("Garaje Javeriana")) as Resource.Success).data.garaje
+        val inicio = AppContainer.reloj().plusDays(diasAdelante).withHour(8).withMinute(0).withSecond(0).withNano(0)
+        val reserva = (AppContainer.reservaRepository.crear(SolicitudReserva(garaje, TipoVehiculo.CAR, "AGH430", inicio, inicio.plusHours(2)))
+            as Resource.Success).data
+        var pago = (AppContainer.pagoRepository.pagar(reserva.id, Tarjeta.PRUEBA_APROBADA, "captura-${reserva.id}") as Resource.Success).data
+        repeat(20) { if (pago.estado == EstadoPago.PENDING) { Thread.sleep(500); pago = (AppContainer.pagoRepository.obtener(pago.id) as Resource.Success).data } }
+        check(pago.estado == EstadoPago.APPROVED) { "El pago no se aprobó: ${pago.estado}" }
+        reserva.id
     }
 
     @Test fun perfil() {

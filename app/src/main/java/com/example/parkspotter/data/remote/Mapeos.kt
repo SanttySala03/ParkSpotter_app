@@ -4,10 +4,13 @@ import com.example.parkspotter.model.Disponibilidad
 import com.example.parkspotter.model.DisponibilidadGaraje
 import com.example.parkspotter.model.DisponibilidadPorTipo
 import com.example.parkspotter.model.EstadoGaraje
+import com.example.parkspotter.model.EstadoPago
 import com.example.parkspotter.model.EstadoPlaza
 import com.example.parkspotter.model.EstadoReserva
 import com.example.parkspotter.model.Garaje
 import com.example.parkspotter.model.GarajeDetalle
+import com.example.parkspotter.model.Notificacion
+import com.example.parkspotter.model.Pago
 import com.example.parkspotter.model.Plaza
 import com.example.parkspotter.model.Reserva
 import com.example.parkspotter.model.TipoVehiculo
@@ -224,6 +227,39 @@ fun ReservationResponse.aModelo(): Reserva? {
         precioPorHora = pricePerHour.aPesos(),
         total = totalPrice.aPesos(),
         creadaEn = createdAt.aFechaHora(),
-        canceladaEn = cancelledAt.aFechaHora()
+        canceladaEn = cancelledAt.aFechaHora(),
+        estadoPago = EstadoPago.de(paymentStatus)
     )
 }
+
+fun PaymentResponse.aModelo() = Pago(
+    id = id,
+    referencia = reference.orEmpty(),
+    reservaId = reservationId,
+    codigoReserva = reservationCode.orEmpty(),
+    garajeNombre = garageName.orEmpty(),
+    garajeDireccion = garageAddress.orEmpty(),
+    placa = vehiclePlate,
+    inicio = startTime.aFechaHora(),
+    fin = endTime.aFechaHora(),
+    monto = amount.aPesos(),
+    estado = EstadoPago.de(status) ?: EstadoPago.PENDING,
+    franquicia = cardBrand.orEmpty(),
+    ultimos4 = cardLast4.orEmpty(),
+    transaccion = gatewayTransactionId,
+    comprobante = receiptNumber,
+    motivoRechazo = declineReason,
+    creadoEn = createdAt.aFechaHora(),
+    aprobadoEn = approvedAt.aFechaHora(),
+    reembolsadoEn = refundedAt.aFechaHora()
+)
+
+fun NotificationResponse.aModelo() = Notificacion(
+    id = id,
+    tipo = type.orEmpty(),
+    titulo = title.orEmpty(),
+    mensaje = message.orEmpty(),
+    reservaId = reservationId,
+    leida = read == true,
+    creadaEn = createdAt.aFechaHora()
+)
